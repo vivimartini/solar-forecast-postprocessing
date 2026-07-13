@@ -30,6 +30,11 @@
   Overfit was most of the earlier damage; fold-to-fold std collapsed 9.3→2.4%. First real positive skill.
 - STILL NEXT: capacity-normalised target (residual as fraction of capacity/clear-sky proxy) so the
   mapping is stationary as the fleet grows; still-negative folds 1 & 3 are season/fleet mismatches.
+- GBDT choice (scripts/06_xgb_compare.py): LightGBM vs XGBoost on a matched config (max_depth 4 ≈
+  num_leaves 15, min_child_weight 200 == min_child_samples, same lr/subsample/colsample/lambda, ES 50).
+  LightGBM +0.88% vs XGBoost +0.38% mean; LightGBM wins ALL 5 folds, same 3/5 positive, similar std.
+  Same shape (both stumble on folds 1 & 3). DECISION: keep LightGBM. Caveat: configs matched not
+  identical (leaf-wise vs depth-wise) + gap small (<1% abs) → library choice is not the big lever.
 
 ## Signature idea — lagged-ensemble dispersion (src/lagged_ensemble.py)
 - Prior runs for a valid hour = a time-lagged ensemble; their spread (std of latest k=4 PRIOR members,
@@ -43,3 +48,15 @@
   pinball/coverage), where an error-magnitude signal is exactly what sizes the interval width.
 - Repro note: add_dispersion sorts by (step, issued_at) before reset_index → changes row order → shifts
   LightGBM's bagged subsample slightly (base drifts +0.9%→+0.83%). Benign; sort to canonical order to pin.
+
+## Layer 2 — intervals (P10/P50/P90) & calibration
+- Raw quantile GBDT (scripts/05_intervals.py): pinball 391.7 | P10-90 coverage 71.9% | width 2933 (base).
+  Intervals TOO NARROW — 71.9% vs 80% nominal (undercover ~8pts). disp_mw again null (391.7→390.2, cov/width flat).
+- CQR conformal (scripts/06_conformal.py; fit/ES/cal = 70/15/15% of each fold's train by issue time):
+  pinball 393.5 | coverage 74.1% | width 3254 (base); base+disp 390.0 | 74.0% | 3247.
+- CQR helps but UNDER-DELIVERS: coverage 71.9→74.1% (still <80), width +11%, pinball slightly worse
+  (sharpness↔coverage tradeoff). Root cause = SAME non-stationarity: calibration slice is PAST relative
+  to the val block, so time drift breaks conformal exchangeability → Q too small for the future.
+- disp_mw STILL null on calibrated intervals too (pinball −0.9%, coverage/width flat) → drop it for good.
+- NEXT for 80% coverage: weighted/adaptive conformal (recency-weight cal residuals) or capacity-normalised
+  target (aligns past/future dists, helps point skill AND exchangeability). Drift inflation = band-aid.

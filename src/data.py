@@ -14,6 +14,7 @@ import pandas as pd
 import pvlib
 
 from src.lagged_ensemble import add_dispersion
+from src.capacity import add_capacity_proxy
 
 
 def load_config(path="config.yaml"):
@@ -61,6 +62,7 @@ def build_dataset(cfg, lead_band=None):
     fc, ac = load_raw(cfg)
     fc = prepare_forecasts(fc)
     fc = add_dispersion(fc, k=cfg["lagged_ensemble"]["k_default"])   
+    fc = add_capacity_proxy(fc, window_days=cfg["capacity"]["window_days"])   # fleet proxy
 
     lo, hi = lead_band or cfg["lead_band_h"]
     fc = fc[(fc["op_lead_h"] > lo) & (fc["op_lead_h"] <= hi)]        # usable leads only
@@ -71,5 +73,6 @@ def build_dataset(cfg, lead_band=None):
 
     df = add_solar_position(df, cfg)
     df["is_day"] = df["solar_elevation"] > cfg["daytime_elevation_deg"]
-    df["residual_mw"] = df["actual_mw"] - df["fc_mw"]         
+    df["residual_mw"] = df["actual_mw"] - df["fc_mw"]  
+    df["residual_norm"] = df["residual_mw"] / df["cap_mw"]                    # error as fraction of fleet       
     return df.sort_values(["issued_at", "step"]).reset_index(drop=True)  #for reproducibility

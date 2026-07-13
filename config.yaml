@@ -9,3 +9,4 @@ quantiles: [0.1, 0.5, 0.9]
 lagged_ensemble: { window_days: 3, k_members: [2, 4, 8], k_default: 4 }
 validation: { scheme: rolling_origin, n_folds: 5, embargo_days: 3, sealed_test_frac: 0.2 }
 seed: 42
+capacity: { window_days: 60 }
