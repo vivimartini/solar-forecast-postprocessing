@@ -25,7 +25,7 @@
   (10.7k→52.6k rows) → non-stationarity, not a bug: MW-level residual mapping learned on a smaller
   fleet mis-sizes corrections on a larger one; season mismatch across folds; no early-stopping overfit.
 - NEXT: capacity-normalised target (residual as fraction of capacity/clear-sky proxy) so the mapping is
-  stationary as the fleet grows; add early stopping + a fleet-size feature.
+  stationary as the fleet grows; add early stopping + a fleet-size feature
 
 ## Signature idea — lagged-ensemble dispersion
 - Prior runs for a valid hour = a time-lagged ensemble; their spread = uncertainty signal.
