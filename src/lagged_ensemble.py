@@ -7,7 +7,7 @@ a leak-safe proxy for forecast uncertainty: agreement -> settled weather, disagr
 -> volatile. Built in issuance order, using the latest k prior members.
 """
 import pandas as pd
-
+from src.lagged_ensemble import add_dispersion
 
 def add_dispersion(forecasts, k=4, out_col="disp_mw"):
     """Add `out_col` = std of the latest k PRIOR forecasts for the same valid hour.
