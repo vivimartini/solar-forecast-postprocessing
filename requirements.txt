@@ -4,6 +4,7 @@ numpy
 scipy
 pvlib
 lightgbm
+xgboost
 scikit-learn
 matplotlib
 pyyaml
