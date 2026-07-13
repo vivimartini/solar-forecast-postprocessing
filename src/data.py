@@ -71,5 +71,5 @@ def build_dataset(cfg, lead_band=None):
 
     df = add_solar_position(df, cfg)
     df["is_day"] = df["solar_elevation"] > cfg["daytime_elevation_deg"]
-    df["residual_mw"] = df["actual_mw"] - df["fc_mw"]                # what we correct
-    return df.reset_index(drop=True)
+    df["residual_mw"] = df["actual_mw"] - df["fc_mw"]         
+    return df.sort_values(["issued_at", "step"]).reset_index(drop=True)  #for reproducibility
