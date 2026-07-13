@@ -6,6 +6,6 @@ lead_band_h: [0, 36]          # OPERATIONAL lead: step - issued_at
 daytime_elevation_deg: 5
 location: { lat: 51.16, lon: 10.45, tz: UTC }   # Germany centroid
 quantiles: [0.1, 0.5, 0.9]
-lagged_ensemble: { window_days: 3, k_members: [2, 4, 8] }
+lagged_ensemble: { window_days: 3, k_members: [2, 4, 8], k_default: 4 }
 validation: { scheme: rolling_origin, n_folds: 5, embargo_days: 3, sealed_test_frac: 0.2 }
 seed: 42

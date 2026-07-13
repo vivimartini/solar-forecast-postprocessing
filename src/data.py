@@ -13,6 +13,8 @@ import numpy as np
 import pandas as pd
 import pvlib
 
+from src.lagged_ensemble import add_dispersion
+
 
 def load_config(path="config.yaml"):
     with open(path) as f:
@@ -58,9 +60,10 @@ def build_dataset(cfg, lead_band=None):
     """One clean row per forecast case, joined to its hourly actual."""
     fc, ac = load_raw(cfg)
     fc = prepare_forecasts(fc)
+    fc = add_dispersion(fc, k=cfg["lagged_ensemble"]["k_default"])   
 
     lo, hi = lead_band or cfg["lead_band_h"]
-    fc = fc[(fc["op_lead_h"] > lo) & (fc["op_lead_h"] <= hi)]   # usable leads only
+    fc = fc[(fc["op_lead_h"] > lo) & (fc["op_lead_h"] <= hi)]        # usable leads only
 
     ah = hourly_actuals(ac)
     df = (fc.merge(ah, left_on="step", right_index=True, how="inner")
@@ -68,5 +71,5 @@ def build_dataset(cfg, lead_band=None):
 
     df = add_solar_position(df, cfg)
     df["is_day"] = df["solar_elevation"] > cfg["daytime_elevation_deg"]
-    df["residual_mw"] = df["actual_mw"] - df["fc_mw"]          # what we correct
+    df["residual_mw"] = df["actual_mw"] - df["fc_mw"]                # what we correct
     return df.reset_index(drop=True)
