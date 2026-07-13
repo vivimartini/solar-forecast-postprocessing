@@ -23,7 +23,7 @@
   Per fold: 1 −27.9% · 2 −10.8% · 3 −10.1% · 4 −8.3% · 5 +0.7%.
 - Not leakage (opposite of the +30% red flag). Skill improves MONOTONICALLY with train size
   (10.7k→52.6k rows) → non-stationarity, not a bug: MW-level residual mapping learned on a smaller
-  fleet mis-sizes corrections on a larger one; season mismatch across folds; no early-stopping overfit.
+  fleet mis-sizes corrections on a larger one; season mismatch across folds; no early-stopping overfit
 - NEXT: capacity-normalised target (residual as fraction of capacity/clear-sky proxy) so the mapping is
   stationary as the fleet grows; add early stopping + a fleet-size feature
 
