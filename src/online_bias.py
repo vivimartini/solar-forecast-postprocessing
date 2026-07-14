@@ -1,7 +1,15 @@
 # src/online_bias.py
-"""Adaptive (online) bias correction. The forecast's bias drifts over time and even flips
-sign, and it drifts DIFFERENTLY by hour-of-day, so a per-hour recent-bias term tracks each
-hour's drift. Leak-safe: uses only realized past days (shift(1))."""
+"""Online bias correction.
+
+Came out of the sealed-test post-mortem: the forecast's mean bias flipped sign between
+the dev period (+157 MW) and the test period (-320 MW), which is why the static GBDT
+correction fell apart out-of-sample. A rolling estimate of the recent bias tracks the
+drift instead of freezing it. per_hour=True because the bias drifts differently by
+hour-of-day (the ramp hours behave differently from midday).
+
+Uses only fully realized past days -- rolling window over valid days, shift(1),
+then looked up by issue day. A forecast issued on day D sees residuals up to D-1.
+"""
 import pandas as pd
 
 
