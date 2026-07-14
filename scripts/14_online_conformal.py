@@ -1,8 +1,9 @@
 # scripts/14_online_conformal.py
-"""Online adaptive conformal (ACI; Gibbs & Candes 2021 / Suresh 2026).
-Self-corrects coverage while moving through the DRIFTING validation block, so it works
-where offline conformal fails. Optional dispersion-scaling = the full synthesis
-(online adaptation fixes the drift; instability signal allocates width by regime).
+"""Online conformal (ACI, Gibbs & Candes 2021): update the offset Qm as we walk the
+validation block in time order, widening whenever we've been missing too often.
+This is what finally fixed coverage (74 -> 83%) -- offline conformal can't follow the
+drift, an online update can. With dispersion scaling on top, the width also lands
+where it's needed (volatile hours 0.776 -> 0.796, calm 0.892 -> 0.873).
 Run: PYTHONPATH=. python scripts/14_online_conformal.py
 """
 import numpy as np, pandas as pd
@@ -35,7 +36,7 @@ def run(day, folds, scaled):
             add = max(Qm, 0.0) * u[t]
             lo_t, hi_t = max(qlo[t] - add, 0.0), qhi[t] + add
             inside[t] = int(lo_t <= y[t] <= hi_t); w[t] = hi_t - lo_t
-            Qm += GAMMA * ((1 - inside[t]) - (1 - TARGET))               # widen if missing >20%
+            Qm += GAMMA * ((1 - inside[t]) - (1 - TARGET))   # miss -> widen, hit -> slowly shrink
         covs.append(inside.mean()); widths.append(w.mean())
         d = day.loc[va].copy(); d["_in"] = inside; rows.append(d[["disp_mw", "_in"]])
     allrows = pd.concat(rows).dropna(subset=["disp_mw"])
