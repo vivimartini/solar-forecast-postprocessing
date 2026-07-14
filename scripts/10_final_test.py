@@ -1,8 +1,11 @@
 # scripts/10_final_test.py
-"""FINAL evaluation on the SEALED test set (touched once).
-Point: rich features, fleet-normalized. Intervals: online ACI (dispersion-scaled).
+"""FINAL evaluation on the sealed test set (touched once).
+Point = fc + per-hour online bias (the static GBDT scored -15% here, see DECISIONS.md).
+Intervals = quantile GBDTs + online ACI with dispersion scaling.
+Also dumps outputs/predictions.csv for make_figures.py.
 Run: PYTHONPATH=. python scripts/10_final_test.py
 """
+from pathlib import Path
 import numpy as np, pandas as pd
 from src.data import load_config, build_dataset
 from src.features import make_features, RICH_FEATURES
