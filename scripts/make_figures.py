@@ -27,7 +27,7 @@ axes[0].set_ylabel("generation (MW)"); axes[0].legend(fontsize=8)
 fig.suptitle("The forecast and its confidence band — tight when settled, wide when volatile")
 fig.tight_layout(); fig.savefig("outputs/fig_fan_charts.png", dpi=120)
 
-# --- Fig 2: calibration — is the stated confidence honest? ---
+# fig 2: reliability -- observed frequency at the stated P10/P90 levels
 cov10, cov90 = (p.actual_mw <= p.p10).mean(), (p.actual_mw <= p.p90).mean()
 fig, ax = plt.subplots(figsize=(4.6, 4.4))
 ax.plot([0, 1], [0, 1], "--", color="#888", label="perfectly calibrated")
@@ -37,7 +37,7 @@ ax.set(xlabel="stated (nominal) level", ylabel="observed frequency", xlim=(0, 1)
        title="Calibration: the model's stated confidence ≈ reality")
 ax.legend(fontsize=9); ax.grid(alpha=.25); fig.tight_layout(); fig.savefig("outputs/fig_reliability.png", dpi=120)
 
-# --- Fig 3: the uncertainty is INFORMATIVE — wider band => genuinely less accurate ---
+# fig 3: wider band should mean genuinely bigger error, else the widths are decoration
 p["band"] = pd.qcut(p.width, 3, labels=["narrow\n(confident)", "medium", "wide\n(uncertain)"])
 by = p.groupby("band", observed=True)["abserr"].mean()
 fig, ax = plt.subplots(figsize=(5.8, 4.2))
