@@ -1,6 +1,6 @@
 # scripts/10_final_test.py
 """FINAL evaluation on the sealed test set (touched once).
-Point = fc + per-hour online bias (the static GBDT scored -15% here, see DECISIONS.md).
+Point = online bias + optional GBDT on the de-biased residual.
 Intervals = quantile GBDTs + online ACI with dispersion scaling.
 Also dumps outputs/predictions.csv for make_figures.py.
 Run: PYTHONPATH=. python scripts/10_final_test.py
@@ -10,7 +10,7 @@ import numpy as np, pandas as pd
 from src.data import load_config, build_dataset
 from src.features import make_features, RICH_FEATURES
 from src.splits import train_test_seal
-from src.models import train_quantile_model
+from src.models import train_quantile_model, train_residual_model
 from src.online_bias import add_online_bias
 from src.metrics import rmse, skill_score
 
@@ -21,6 +21,7 @@ def main():
     cfg = load_config(); day = build_dataset(cfg); day = day[day.is_day].reset_index(drop=True)
     ob = cfg["online_bias"]
     day = add_online_bias(day, window_days=ob["window_days"], per_hour=ob["per_hour"])  # adaptive point correction
+    day["residual_debias"] = day["residual_mw"] - day["online_bias"]
     X, _ = make_features(day, feature_cols=RICH_FEATURES); yn = day["residual_norm"]
     med = day["disp_mw"].median()
 
@@ -36,6 +37,12 @@ def main():
 
     corrected = np.clip(fc(test) + day.loc[test, "online_bias"].values, 0, None)   # adaptive point model
     base_rmse, mod_rmse = rmse(actual, fc(test)), rmse(actual, corrected)
+
+    # GBDT on what's left after online bias (trained on dev only)
+    y_deb = day["residual_debias"]
+    gbdt = train_residual_model(X.iloc[fit], y_deb.iloc[fit], X.iloc[es], y_deb.iloc[es])
+    corrected2 = np.clip(fc(test) + day.loc[test, "online_bias"].values + gbdt.predict(X.iloc[test]), 0, None)
+    mod2_rmse = rmse(actual, corrected2)
 
     def qp(m, i): return fc(i) + m.predict(X.iloc[i]) * cap(i)
     m_lo = train_quantile_model(X.iloc[fit], yn.iloc[fit], LO, X.iloc[es], yn.iloc[es])
@@ -55,6 +62,7 @@ def main():
     pred = day.loc[test, ["issued_at", "step", "op_lead_h", "disp_mw"]].copy()
     pred["fc_mw"] = fc(test)
     pred["corrected"] = corrected
+    pred["corrected_debias_gbdt"] = corrected2
     pred["p10"] = p10
     pred["p90"] = p90
     pred["actual_mw"] = actual
@@ -64,6 +72,8 @@ def main():
     print("=== SEALED TEST (touched once) ===")
     print(f"rows {len(test)} | {day.loc[test,'issued_at'].min().date()} -> {day.loc[test,'issued_at'].max().date()}")
     print(f"POINT:     baseline RMSE {base_rmse:7.1f} -> model {mod_rmse:7.1f} | skill {skill_score(mod_rmse, base_rmse)*100:+.2f}%")
+    print(f"POINT+GBDT: baseline RMSE {base_rmse:7.1f} -> model {mod2_rmse:7.1f} | skill {skill_score(mod2_rmse, base_rmse)*100:+.2f}%"
+          f"  (online bias + GBDT on de-biased residual)")
     print(f"INTERVALS: coverage {inside.mean()*100:5.1f}% | width {w.mean():7.1f}")
 
     print("\nPOINT skill by lead band:")

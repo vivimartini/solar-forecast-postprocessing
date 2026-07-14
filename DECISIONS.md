@@ -73,8 +73,15 @@
 
 ## Metric (b) — revision / confidence (scripts/metric_b.py)
 - next_revision = next issuance's fc − current fc, same valid hour. Direction ≈ coin flip (50.6% up).
-- Spearman(disp, |next revision|) = 0.443. Dispersion helps here: MAE 222.7 → 219.9 MW (only place it helps).
-- Answer to brief: bounds are symmetric, sized by instability; direction is unpredictable.
+- Spearman(disp, |next revision|) = 0.443. Dispersion helps |revision| MAE: 222.7 → 219.9 MW.
+- **Revision quantiles (P10/P50/P90 of next_revision):** base pinball 107.9, coverage 77.4%, width 919 MW;
+  base+disp 107.3, coverage 78.0%, width 940 MW. Dispersion helps here (unlike actuals intervals).
+- Answer to brief: symmetric bounds on the next update, sized by instability; direction unpredictable.
+
+## GBDT on de-biased residual (scripts/15_debias_gbdt.py)
+- Target = residual_mw − online_bias. CV: mixed (+0.3–1.8pp on some folds over bias alone).
+- **Sealed test: bias +1.28% → bias+GBDT −2.53%.** Conditional structure still doesn't transfer OOS.
+- DECISION: point deliverable = online bias only; GBDT layer kept as documented negative result.
 
 ## Conformal arc (scripts/06, 09, 13, 13b, 14)
 - Raw quantile intervals: 71.9% coverage (undercover). Fleet-normalised target alone → 77.1% without conformal.
@@ -85,6 +92,8 @@
 ## Sealed test — final deliverable (scripts/10_final_test.py)
 - Window: 2025-09-24 → 2026-05-31, 14,284 daytime rows, touched once.
 - Static GBDT (rich, normalised): −15.18% skill. Diagnosis: bias flips +157 MW (dev) → −320 MW (test), progressive 2026 drift.
-- Online per-hour bias (60d window): **+1.28%** skill. Intervals (online ACI + dispersion): **79.1%** coverage.
+- Online per-hour bias (60d window): **+1.28%** skill. GBDT on de-biased residual: **−2.53%** (still hurts OOS).
+- Intervals (online ACI + dispersion): **79.1%** coverage.
+- DECISION: ship online bias only for the point forecast; GBDT layer documented as negative result.
 - Conditional coverage calm/mid/volatile: 0.82 / 0.79 / 0.77. |error| by instability: 801 → 1412 → 1725 MW.
 - Headline: adaptivity beats static under non-stationarity. Point correction is modest; uncertainty layer generalises.

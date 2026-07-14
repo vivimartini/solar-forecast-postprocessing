@@ -57,8 +57,9 @@ learned to push forecasts one way, the future needed the other, so it confidentl
 
 The fix follows from the diagnosis — instead of a frozen model, track the *recent* bias and update as
 you go. A per-hour adaptive bias (each hour of day drifts on its own) takes the sealed-test result from
-−15% to **+1.28%**. Small, but real, and it holds up out of sample, which the fancier model didn't.
-Putting the static GBDT back on top of the de-biased residual still hurt, so I left it out.
+−15% to **+1.28%**. I also tried putting the regularised GBDT back on top of the de-biased residual;
+it scored **−2.53%** on the sealed test, so the point deliverable stays online bias only. Small gain,
+but real, and it holds up out of sample.
 
 The uncertainty side showed the same pattern: a fixed (offline) conformal calibration failed under the
 drift, while an online one that self-corrects as it moves through the test period gets the P10–P90 band
@@ -72,7 +73,8 @@ to ~80% coverage on data it never saw.
 | by lead band (0–6 / 6–12 / 12–24 / 24–36h) | +1.72 / +0.89 / +1.33 / +1.24% |
 | P10–P90 coverage | 79.1% (target 80%) |
 | coverage by regime (calm / mid / volatile) | 0.82 / 0.79 / 0.77 |
-| disagreement vs next-revision size (Spearman) | 0.44 |
+| direction of next revision | ~50% up (unpredictable) |
+| revision quantiles (P10–P90 of next update) | 78% coverage, ~940 MW width (dispersion helps) |
 | forecast error, calm → volatile hours | 801 → 1412 → 1725 MW |
 
 Monthly skill stays positive through late 2025, dips in parts of early 2026 as the bias keeps drifting
@@ -129,6 +131,5 @@ outputs/      eda plot + sealed-test figures (regenerated, gitignored)
 
 ## What I'd do next
 
-- Revisit the static GBDT on top of the online-bias residual (de-biased target might be stationary enough now).
 - Recency-weighted conformal instead of a fixed cal slice, to close the last ~1pt of coverage without overshooting.
-- Explicit revision quantiles for metric (b) (P10/P90 of the next update, not just |revision| MAE).
+- Variance-normalised dispersion (partial correlation was only 0.18 controlling for level).
