@@ -64,6 +64,13 @@ def add_forecast_shape(forecasts, group_col="issued_at"):
     f["fc_next1h"] = g.shift(-1)
     return f
 
+def add_next_revision(forecasts):
+    """Metric (b) LABEL: how the NEXT issuance revises the forecast for the same valid hour.
+    (This is a target - future info - never a feature.)"""
+    f = forecasts.sort_values(["step", "issued_at"]).copy()
+    f["next_revision"] = f.groupby("step")["fc_mw"].shift(-1) - f["fc_mw"]
+    return f
+
 
 def build_dataset(cfg, lead_band=None):
     """One clean row per forecast case, joined to its hourly actual."""
@@ -71,7 +78,8 @@ def build_dataset(cfg, lead_band=None):
     fc = prepare_forecasts(fc)
     fc = add_dispersion(fc, k=cfg["lagged_ensemble"]["k_default"])   
     fc = add_capacity_proxy(fc, window_days=cfg["capacity"]["window_days"])   # fleet proxy
-    fc = add_forecast_shape(fc)   
+    fc = add_forecast_shape(fc) 
+    fc = add_next_revision(fc)    
 
     lo, hi = lead_band or cfg["lead_band_h"]
     fc = fc[(fc["op_lead_h"] > lo) & (fc["op_lead_h"] <= hi)]        # usable leads only
@@ -85,3 +93,4 @@ def build_dataset(cfg, lead_band=None):
     df["residual_mw"] = df["actual_mw"] - df["fc_mw"]  
     df["residual_norm"] = df["residual_mw"] / df["cap_mw"]                    # error as fraction of fleet       
     return df.sort_values(["issued_at", "step"]).reset_index(drop=True)  #for reproducibility
+
