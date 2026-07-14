@@ -1,17 +1,25 @@
 # src/online_bias.py
-"""Adaptive (online) bias correction. The forecast's bias drifts over the years and even
-flips sign, so a static learned correction fails out-of-sample. A slowly-updating estimate
-of the RECENT bias tracks the drift. Leak-safe: uses only realized past days (shift(1)).
-"""
+"""Adaptive (online) bias correction. The forecast's bias drifts over time and even flips
+sign, and it drifts DIFFERENTLY by hour-of-day, so a per-hour recent-bias term tracks each
+hour's drift. Leak-safe: uses only realized past days (shift(1))."""
 import pandas as pd
 
 
-def add_online_bias(df, window_days=45, out_col="online_bias"):
-    """df needs step, issued_at, actual_mw, fc_mw (daytime rows).
-    out_col = recent mean(actual - forecast), as-of the issue day (past days only)."""
-    resid = df["actual_mw"] - df["fc_mw"]
-    daily = resid.groupby(df["step"].dt.floor("D")).mean().sort_index()
-    b = daily.rolling(f"{window_days}D", min_periods=3).mean().shift(1).ffill()
-    df = df.copy()
-    df[out_col] = df["issued_at"].dt.floor("D").map(b).fillna(0.0).values
-    return df
+def add_online_bias(df, window_days=60, per_hour=True, out_col="online_bias"):
+    d = df.copy()
+    d["_r"] = d["actual_mw"] - d["fc_mw"]
+    d["_vday"] = d["step"].dt.floor("D")
+    d["_iday"] = d["issued_at"].dt.floor("D")
+    if per_hour:
+        d["_hour"] = d["step"].dt.hour
+        piv = d.pivot_table(index="_vday", columns="_hour", values="_r", aggfunc="mean").sort_index()
+        rolled = piv.rolling(f"{window_days}D", min_periods=3).mean().shift(1).ffill()
+        rs = rolled.stack().rename("_b").reset_index()
+        rs.columns = ["_bday", "_hour", "_b"]
+        merged = d.merge(rs, left_on=["_iday", "_hour"], right_on=["_bday", "_hour"], how="left")
+        out = df.copy(); out[out_col] = merged["_b"].fillna(0.0).values
+    else:
+        daily = d.groupby("_vday")["_r"].mean().sort_index()
+        b = daily.rolling(f"{window_days}D", min_periods=3).mean().shift(1).ffill()
+        out = df.copy(); out[out_col] = d["_iday"].map(b).fillna(0.0).values
+    return out

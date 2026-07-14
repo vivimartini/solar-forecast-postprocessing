@@ -16,7 +16,8 @@ LO, HI, TARGET, GAMMA = 0.1, 0.9, 0.8, 0.05
 
 def main():
     cfg = load_config(); day = build_dataset(cfg); day = day[day.is_day].reset_index(drop=True)
-    day = add_online_bias(day, window_days=45)                          # adaptive point correction
+    ob = cfg["online_bias"]
+    day = add_online_bias(day, window_days=ob["window_days"], per_hour=ob["per_hour"])  # adaptive point correction
     X, _ = make_features(day, feature_cols=RICH_FEATURES); yn = day["residual_norm"]
     med = day["disp_mw"].median()
 
