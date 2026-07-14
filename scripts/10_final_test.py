@@ -7,7 +7,8 @@ import numpy as np, pandas as pd
 from src.data import load_config, build_dataset
 from src.features import make_features, RICH_FEATURES
 from src.splits import train_test_seal
-from src.models import train_residual_model, train_quantile_model
+from src.models import train_quantile_model
+from src.online_bias import add_online_bias
 from src.metrics import rmse, skill_score
 
 LO, HI, TARGET, GAMMA = 0.1, 0.9, 0.8, 0.05
@@ -15,6 +16,7 @@ LO, HI, TARGET, GAMMA = 0.1, 0.9, 0.8, 0.05
 
 def main():
     cfg = load_config(); day = build_dataset(cfg); day = day[day.is_day].reset_index(drop=True)
+    day = add_online_bias(day, window_days=45)                          # adaptive point correction
     X, _ = make_features(day, feature_cols=RICH_FEATURES); yn = day["residual_norm"]
     med = day["disp_mw"].median()
 
@@ -28,8 +30,7 @@ def main():
     fc = lambda i: day.loc[i, "fc_mw"].values; cap = lambda i: day.loc[i, "cap_mw"].values
     actual = day.loc[test, "actual_mw"].values
 
-    pm = train_residual_model(X.iloc[fit], yn.iloc[fit], X.iloc[es], yn.iloc[es])
-    corrected = np.clip(fc(test) + pm.predict(X.iloc[test]) * cap(test), 0, None)
+    corrected = np.clip(fc(test) + day.loc[test, "online_bias"].values, 0, None)   # adaptive point model
     base_rmse, mod_rmse = rmse(actual, fc(test)), rmse(actual, corrected)
 
     def qp(m, i): return fc(i) + m.predict(X.iloc[i]) * cap(i)
