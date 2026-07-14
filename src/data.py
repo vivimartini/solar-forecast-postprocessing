@@ -66,8 +66,8 @@ def add_forecast_shape(forecasts, group_col="issued_at"):
     return f
 
 def add_next_revision(forecasts):
-    """Metric (b) LABEL: how the NEXT issuance revises the forecast for the same valid hour.
-    (This is a target - future info - never a feature.)"""
+    """next_revision = next issuance's forecast minus this one, same valid hour.
+    Label for metric (b) only -- it's future info, must never go in as a feature."""
     f = forecasts.sort_values(["step", "issued_at"]).copy()
     f["next_revision"] = f.groupby("step")["fc_mw"].shift(-1) - f["fc_mw"]
     return f
