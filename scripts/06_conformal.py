@@ -1,6 +1,8 @@
 # scripts/06_conformal.py
-"""Layer 2 calibration — Conformalized Quantile Regression (CQR).
-Fixes the coverage gap, and re-tests dispersion on CALIBRATED intervals.
+"""Layer 2 calibration -- CQR (conformalized quantile regression).
+Attempt to close the 72% vs 80% coverage gap from 05. Only got partway (74%):
+the cal slice sits in the past relative to validation, so drift breaks
+exchangeability and Q comes out too small. See DECISIONS.md.
 Run: PYTHONPATH=. python scripts/06_conformal.py
 """
 import numpy as np

@@ -1,6 +1,7 @@
 # scripts/06_xgb_compare.py
-"""LightGBM vs XGBoost for the Layer-1 residual point correction.
-Identical folds, features, and early-stopping protocol -> a like-for-like skill comparison.
+"""LightGBM vs XGBoost, same folds / features / early stopping.
+Sanity check that the library isn't the bottleneck. (It isn't -- LightGBM won
+every fold, but both land <1% skill. Kept for the record.)
 Run: PYTHONPATH=. python scripts/06_xgb_compare.py
 """
 import numpy as np

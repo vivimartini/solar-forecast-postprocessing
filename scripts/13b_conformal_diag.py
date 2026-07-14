@@ -1,5 +1,7 @@
 # scripts/13b_conformal_diag.py
-"""Why did adaptive conformal invert? Check the sign of Q and the cal-slice coverage.
+"""Quick and dirty: why did 13 invert? Print Q's sign and the cal-slice coverage per fold.
+Answer: base intervals OVER-cover the (older) cal slice on folds 1-2 -> Q < 0 -> conformal
+narrows exactly where the drifted future needed widening. Not a bug, an exchangeability break.
 Run: PYTHONPATH=. python scripts/13b_conformal_diag.py
 """
 import numpy as np

@@ -1,7 +1,9 @@
-# scripts/12_metric_b.py
-"""Metric (b): predict how the NEXT cycle revises the forecast (forecast-instability signal).
-The distinctive deliverable, and where lagged-ensemble dispersion finally earns its place.
-Run: PYTHONPATH=. python scripts/12_metric_b.py
+# scripts/metric_b.py
+"""Metric (b): predict how the NEXT cycle will revise the forecast.
+Direction turned out to be a coin flip (checked below), so the useful thing to predict
+is the SIZE of the revision -- and this is where dispersion finally pays off after
+being useless for the point model and the intervals.
+Run: PYTHONPATH=. python scripts/metric_b.py
 """
 import numpy as np
 from scipy.stats import spearmanr
@@ -17,11 +19,11 @@ def main():
     day = day[day["is_day"]].dropna(subset=["next_revision", "disp_mw"]).reset_index(drop=True)
     day["abs_rev"] = day["next_revision"].abs()
 
-    # (1) diagnostic: does disagreement predict the SIZE of the next revision?
+    # (1) does disagreement between past runs predict how much the next run will move?
     rho = spearmanr(day["disp_mw"], day["abs_rev"]).correlation
-    print(f"Spearman(dispersion, |next revision|) = {rho:.3f}   <- dispersion's real home")
+    print(f"Spearman(dispersion, |next revision|) = {rho:.3f}")
 
-    # (2) model: predict |next revision|; does dispersion help HERE (unlike point/intervals)?
+    # (2) model |next revision| with and without dispersion, same harness as the point model
     v = cfg["validation"]
     folds, _ = rolling_origin_splits(day, v["n_folds"], v["embargo_days"], v["sealed_test_frac"])
     y = day["abs_rev"]
@@ -35,7 +37,7 @@ def main():
             maes.append(np.mean(np.abs(m.predict(X.iloc[va]) - y.iloc[va].values)))
         print(f"{name:18s}: MAE predicting |next revision| = {np.mean(maes):.1f} MW")
 
-    # (3) direction — honest check (expected near-chance)
+    # (3) direction check -- if this is ~50% there's nothing to model there
     print(f"\ndirection base rate: {(day.next_revision > 0).mean()*100:.1f}% of revisions are UP "
           f"(near 50% => which-way is ~unpredictable; magnitude is the useful signal)")
 

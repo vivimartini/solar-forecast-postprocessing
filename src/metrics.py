@@ -1,5 +1,5 @@
 # src/metrics.py
-"""Scoring functions. Deliberately simple and unit-tested (tests/test_metrics.py)."""
+"""Scoring functions. Kept boring on purpose; tests in tests/test_metrics.py."""
 import numpy as np
 
 
@@ -24,7 +24,7 @@ def pinball_loss(y_true, q_pred, tau):
 
 
 def coverage(y_true, lower, upper):
-    """Fraction of actuals inside [lower, upper] — should ~match the nominal level."""
+    """Fraction of actuals inside [lower, upper]. For an 80% interval this should be ~0.8."""
     y = np.asarray(y_true)
     return float(np.mean((y >= np.asarray(lower)) & (y <= np.asarray(upper))))
 

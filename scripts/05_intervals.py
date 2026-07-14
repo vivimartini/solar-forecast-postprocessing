@@ -1,7 +1,7 @@
 # scripts/05_intervals.py
-"""Layer 2 — P10/P50/P90 intervals on the residual. THE decisive test:
-does lagged-ensemble dispersion improve interval quality (pinball / coverage / width)?
-Compares base vs base+dispersion on identical folds.
+"""Layer 2 -- P10/P50/P90 quantile GBDTs on the residual.
+Main question here: does dispersion help interval quality (pinball/coverage/width)?
+It helped nothing for the point model, this is its more natural home.
 Run: PYTHONPATH=. python scripts/05_intervals.py
 """
 import numpy as np

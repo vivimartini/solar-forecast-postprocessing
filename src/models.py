@@ -1,26 +1,29 @@
 # src/models.py
-"""Models. Layer 1: a gradient-boosted residual correction (LightGBM).
-Regularised + early stopping so it keeps only strong, repeatable patterns.
-An XGBoost variant with a matched config is provided for a like-for-like comparison.
+"""LightGBM residual/quantile models, plus an XGBoost twin for the library comparison.
+
+First attempt used near-default params (num_leaves=31, min_child_samples=50, no early
+stopping) and overfit badly -- see DECISIONS.md. Current params are deliberately heavy
+on regularisation: this dataset rewards caution, not capacity.
 """
 import lightgbm as lgb
 import xgboost as xgb
 
 DEFAULT_PARAMS = dict(
     objective="regression",
-    n_estimators=3000,          # upper bound; early stopping picks the real number
+    n_estimators=3000,          # just a ceiling, early stopping decides
     learning_rate=0.03,
-    num_leaves=15,              # shallower trees -> less freedom to memorise
-    min_child_samples=200,      # needs 200+ examples before committing to a pattern
+    num_leaves=15,              # was 31 -> memorised the training folds
+    min_child_samples=200,      # don't trust a split seen on <200 rows
     subsample=0.7, subsample_freq=1,
     colsample_bytree=0.7,
     reg_lambda=5.0,
     random_state=42, n_jobs=-1, verbose=-1,
 )
 
-# XGBoost params chosen to mirror DEFAULT_PARAMS as closely as the two libraries allow:
-# max_depth=4 -> up to 16 leaves (~num_leaves=15); min_child_weight=200 == min_child_samples
-# for the squared-error objective (hessian is 1 per row); same lr/subsample/colsample/lambda.
+# Matched to DEFAULT_PARAMS as closely as the two APIs allow: max_depth=4 gives up to
+# 16 leaves (~num_leaves 15), and for squared error the hessian is 1/row so
+# min_child_weight=200 is the same constraint as min_child_samples=200.
+# Not a perfect match (leaf-wise vs depth-wise growth) -- noted in DECISIONS.md.
 XGB_PARAMS = dict(
     objective="reg:squarederror",
     n_estimators=3000,
@@ -37,7 +40,7 @@ XGB_PARAMS = dict(
 def train_residual_model(X_train, y_train, X_val=None, y_val=None, params=None):
     p = dict(DEFAULT_PARAMS); p.update(params or {})
     model = lgb.LGBMRegressor(**p)
-    if X_val is not None:                        # early stopping: watch a held-out slice
+    if X_val is not None:
         model.fit(X_train, y_train, eval_set=[(X_val, y_val)],
                   callbacks=[lgb.early_stopping(50, verbose=False)])
     else:

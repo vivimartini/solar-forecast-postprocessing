@@ -1,8 +1,9 @@
 # scripts/13_adaptive_conformal.py
-"""Adaptive (dispersion-scaled) conformal — Suresh (2026) style.
-Uses the lagged-ensemble instability signal to widen intervals CONDITIONALLY:
-tight on calm hours, wide on volatile ones. Ties metric (b) back into metric (a).
-Compares global vs adaptive conformal, and reports CONDITIONAL coverage by regime.
+"""Dispersion-scaled conformal: scale the conformal offset by disp_mw so calm hours
+get tight intervals and volatile hours get wide ones.
+Didn't work as hoped -- made conditional coverage WORSE (volatile 0.725 -> 0.651).
+13b tracks down why: Q goes negative on early folds, and scaling amplifies a
+wrong-signed correction. Kept because the failure is instructive.
 Run: PYTHONPATH=. python scripts/13_adaptive_conformal.py
 """
 import numpy as np, pandas as pd
