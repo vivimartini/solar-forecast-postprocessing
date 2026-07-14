@@ -41,10 +41,25 @@ def main():
     u = day.loc[test, "disp_mw"].fillna(med).clip(lower=med*0.2).values
 
     Qm = 0.0; inside = np.zeros(len(actual), int); w = np.zeros(len(actual))
+    p10 = np.zeros(len(actual)); p90 = np.zeros(len(actual))
     for t in range(len(actual)):
         add = max(Qm, 0.0) * u[t]; lo_t, hi_t = max(qlo[t]-add, 0.0), qhi[t]+add
+        p10[t], p90[t] = lo_t, hi_t
         inside[t] = int(lo_t <= actual[t] <= hi_t); w[t] = hi_t - lo_t
         Qm += GAMMA * ((1-inside[t]) - (1-TARGET))
+    
+    from pathlib import Path
+    import pandas as pd
+    Path("outputs").mkdir(exist_ok=True)
+    pd.DataFrame({
+        "issued_at": day.loc[test, "issued_at"].values,
+        "step":      day.loc[test, "step"].values,
+        "fc_mw":     fc(test),
+        "corrected": corrected,          # per-hour-bias corrected point forecast
+        "p10": p10, "p90": p90,          # online-ACI interval
+        "actual_mw": actual,
+        "disp":      day.loc[test, "disp_mw"].values,   # instability signal
+    }).to_csv("outputs/predictions.csv", index=False)
 
     print("=== SEALED TEST (touched once) ===")
     print(f"rows {len(test)} | {day.loc[test,'issued_at'].min().date()} -> {day.loc[test,'issued_at'].max().date()}")
