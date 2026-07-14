@@ -50,14 +50,15 @@ def add_solar_position(df, cfg):
     idx = pd.DatetimeIndex(df["step"])
     df = df.copy()
     df["solar_elevation"] = loc.get_solarposition(idx)["elevation"].values
-    df["clearsky_ghi"] = loc.get_clearsky(idx)["ghi"].values     # NEW: the cloudless ceiling
+    df["clearsky_ghi"] = loc.get_clearsky(idx)["ghi"].values     # no-cloud ceiling for this hour
     return df
 
 
 def add_forecast_shape(forecasts, group_col="issued_at"):
-    """Neighbouring-hour forecast values from the SAME run — leak-safe, since one issuance
-    covers many valid hours and all of them are known at issue time.
-    fc_prev1h / fc_next1h = this run's forecast for the valid hour one step before / after."""
+    """fc_prev1h / fc_next1h = the same run's forecast one hour either side of step.
+    Fine to use at issue time (the whole run is published at once).
+    NB: positional shift assumes each run's steps are contiguous hourly — checked, they are
+    (no gaps or duplicate steps in any issued_at group)."""
     f = forecasts.sort_values([group_col, "step"]).copy()
     g = f.groupby(group_col)["fc_mw"]
     f["fc_prev1h"] = g.shift(1)
