@@ -46,15 +46,23 @@ def prepare_forecasts(forecasts):
 
 
 def add_solar_position(df, cfg):
-    """Solar elevation at the German centroid for each valid time — for the
-    daytime mask and geometry features. Deterministic, so leak-free."""
-    loc = pvlib.location.Location(cfg["location"]["lat"],
-                                  cfg["location"]["lon"],
-                                  tz=cfg["location"]["tz"])
-    sp = loc.get_solarposition(pd.DatetimeIndex(df["step"]))
+    loc = pvlib.location.Location(cfg["location"]["lat"], cfg["location"]["lon"], tz=cfg["location"]["tz"])
+    idx = pd.DatetimeIndex(df["step"])
     df = df.copy()
-    df["solar_elevation"] = sp["elevation"].values
+    df["solar_elevation"] = loc.get_solarposition(idx)["elevation"].values
+    df["clearsky_ghi"] = loc.get_clearsky(idx)["ghi"].values     # NEW: the cloudless ceiling
     return df
+
+
+def add_forecast_shape(forecasts, group_col="issued_at"):
+    """Neighbouring-hour forecast values from the SAME run — leak-safe, since one issuance
+    covers many valid hours and all of them are known at issue time.
+    fc_prev1h / fc_next1h = this run's forecast for the valid hour one step before / after."""
+    f = forecasts.sort_values([group_col, "step"]).copy()
+    g = f.groupby(group_col)["fc_mw"]
+    f["fc_prev1h"] = g.shift(1)
+    f["fc_next1h"] = g.shift(-1)
+    return f
 
 
 def build_dataset(cfg, lead_band=None):
@@ -63,6 +71,7 @@ def build_dataset(cfg, lead_band=None):
     fc = prepare_forecasts(fc)
     fc = add_dispersion(fc, k=cfg["lagged_ensemble"]["k_default"])   
     fc = add_capacity_proxy(fc, window_days=cfg["capacity"]["window_days"])   # fleet proxy
+    fc = add_forecast_shape(fc)   
 
     lo, hi = lead_band or cfg["lead_band_h"]
     fc = fc[(fc["op_lead_h"] > lo) & (fc["op_lead_h"] <= hi)]        # usable leads only

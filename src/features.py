@@ -10,6 +10,17 @@ BASE_FEATURES = [
     "hour_sin", "hour_cos", "doy_sin", "doy_cos", "solar_elevation",
 ]
 
+SHAPE_FEATURES = ["fc_prev1h", "fc_next1h", "fc_ramp", "fc_curv", "clearsky_ghi", "fc_over_cs"]
+RICH_FEATURES = BASE_FEATURES + SHAPE_FEATURES
+
+
+def add_shape_derived(df):
+    df = df.copy()
+    df["fc_ramp"] = df["fc_mw"] - df["fc_prev1h"]                       # local slope
+    df["fc_curv"] = df["fc_next1h"] - 2 * df["fc_mw"] + df["fc_prev1h"] # curvature (ramp bending)
+    df["fc_over_cs"] = df["fc_mw"] / (df["clearsky_ghi"] + 1.0)         # clear-sky-scaled proxy (cloudiness)
+    return df
+
 
 def add_calendar(df):
     """Cyclical encodings of hour-of-day and day-of-year."""
@@ -24,6 +35,9 @@ def add_calendar(df):
 
 
 def make_features(df, feature_cols=BASE_FEATURES):
-    """Return (X, y): features known at issuance, and y = residual (actual - forecast)."""
+    """Return (X, y): features known at issuance, and y = residual (actual - forecast).
+    Shape-derived columns are built on demand when requested in feature_cols."""
     df = add_calendar(df)
+    if any(c in feature_cols for c in ("fc_ramp", "fc_curv", "fc_over_cs")):
+        df = add_shape_derived(df)
     return df[feature_cols], df["residual_mw"]
