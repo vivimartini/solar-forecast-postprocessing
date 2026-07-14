@@ -1,15 +1,4 @@
-# src/online_bias.py
-"""Online bias correction.
-
-Came out of the sealed-test post-mortem: the forecast's mean bias flipped sign between
-the dev period (+157 MW) and the test period (-320 MW), which is why the static GBDT
-correction fell apart out-of-sample. A rolling estimate of the recent bias tracks the
-drift instead of freezing it. per_hour=True because the bias drifts differently by
-hour-of-day (the ramp hours behave differently from midday).
-
-Uses only fully realized past days -- rolling window over valid days, shift(1),
-then looked up by issue day. A forecast issued on day D sees residuals up to D-1.
-"""
+"""Rolling trailing bias, per hour-of-day. shift(1) on valid days so issue-day rows don't peek."""
 import pandas as pd
 
 

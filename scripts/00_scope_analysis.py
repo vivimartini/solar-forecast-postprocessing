@@ -1,9 +1,4 @@
-# scripts/00_scope_analysis.py
-"""Evidence for the scoping decision (brief: 'scope it, explain your rationale').
-(1) The forecast has skill at every lead but degrades; (2) post-processing only HELPS at short
-lead — it HURTS at medium range where the error is irreducible.
-Run: PYTHONPATH=. python scripts/00_scope_analysis.py
-"""
+"""Scope check: forecast skill by lead, adaptive correction on 0-36h vs 168-360h."""
 import numpy as np, pandas as pd, pvlib
 from src.data import load_config, load_raw, prepare_forecasts, hourly_actuals
 

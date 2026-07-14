@@ -1,9 +1,3 @@
-# scripts/05_intervals.py
-"""Layer 2 -- P10/P50/P90 quantile GBDTs on the residual.
-Main question here: does dispersion help interval quality (pinball/coverage/width)?
-It helped nothing for the point model, this is its more natural home.
-Run: PYTHONPATH=. python scripts/05_intervals.py
-"""
 import numpy as np
 from src.data import load_config, build_dataset
 from src.features import make_features, BASE_FEATURES
@@ -15,7 +9,7 @@ QUANTILES = [0.1, 0.5, 0.9]
 
 
 def run(day, cols, folds):
-    X, y = make_features(day, feature_cols=cols)          # y = residual
+    X, y = make_features(day, feature_cols=cols)
     pbs, covs, widths = [], [], []
     for tr, va in folds:
         tr_sorted = tr[np.argsort(day.loc[tr, "issued_at"].values)]
@@ -27,8 +21,8 @@ def run(day, cols, folds):
         cols_pred = []
         for tau in QUANTILES:
             m = train_quantile_model(X.iloc[tr_in], y.iloc[tr_in], tau, X.iloc[val_in], y.iloc[val_in])
-            cols_pred.append(fc_va + m.predict(X.iloc[va]))    # reconstruct power quantile
-        Q = np.sort(np.clip(np.column_stack(cols_pred), 0, None), axis=1)   # monotone + non-neg
+            cols_pred.append(fc_va + m.predict(X.iloc[va]))
+        Q = np.sort(np.clip(np.column_stack(cols_pred), 0, None), axis=1)
         p10, p50, p90 = Q[:, 0], Q[:, 1], Q[:, 2]
 
         pb = np.mean([pinball_loss(actual, Q[:, j], QUANTILES[j]) for j in range(3)])

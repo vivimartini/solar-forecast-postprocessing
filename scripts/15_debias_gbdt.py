@@ -1,9 +1,3 @@
-# scripts/15_debias_gbdt.py
-"""GBDT on the de-biased residual: does a static model help AFTER online bias?
-Target = (actual - fc - online_bias). If bias drift was the main problem, what's left
-might be stationary enough for a GBDT to pick up ramp/season structure.
-Run: PYTHONPATH=. python scripts/15_debias_gbdt.py
-"""
 import numpy as np
 from src.data import load_config, build_dataset
 from src.features import make_features, RICH_FEATURES

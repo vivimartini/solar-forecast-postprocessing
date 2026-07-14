@@ -1,7 +1,3 @@
-# scripts/11_features.py
-"""Does richer feature engineering beat the base set? Fleet-normalized target.
-Run: PYTHONPATH=. python scripts/11_features.py
-"""
 import numpy as np
 from src.data import load_config, build_dataset
 from src.features import make_features, BASE_FEATURES, RICH_FEATURES

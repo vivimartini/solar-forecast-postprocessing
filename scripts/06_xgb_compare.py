@@ -1,9 +1,3 @@
-# scripts/06_xgb_compare.py
-"""LightGBM vs XGBoost, same folds / features / early stopping.
-Sanity check that the library isn't the bottleneck. (It isn't -- LightGBM won
-every fold, but both land <1% skill. Kept for the record.)
-Run: PYTHONPATH=. python scripts/06_xgb_compare.py
-"""
 import numpy as np
 from src.data import load_config, build_dataset
 from src.features import make_features
@@ -32,7 +26,7 @@ def main():
     cfg = load_config()
     day = build_dataset(cfg)
     day = day[day["is_day"]].reset_index(drop=True)
-    X, y = make_features(day)                       # y = residual (actual - forecast)
+    X, y = make_features(day)
 
     v = cfg["validation"]
     folds, _ = rolling_origin_splits(day, v["n_folds"], v["embargo_days"], v["sealed_test_frac"])

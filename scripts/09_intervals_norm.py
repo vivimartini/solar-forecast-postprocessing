@@ -1,7 +1,3 @@
-# scripts/09_intervals_norm.py
-"""Layer 2 on the FLEET-NORMALIZED target, with conformal calibration.
-Does normalizing push coverage toward 80%? Run: PYTHONPATH=. python scripts/09_intervals_norm.py
-"""
 import numpy as np
 from src.data import load_config, build_dataset
 from src.features import make_features, BASE_FEATURES
@@ -21,7 +17,7 @@ def run(day, folds, conformal):
         n = len(s); fit, es, cal = s[:int(.70*n)], s[int(.70*n):int(.85*n)], s[int(.85*n):]
         fc  = lambda idx: day.loc[idx, "fc_mw"].values
         cap = lambda idx: day.loc[idx, "cap_mw"].values
-        def qp(m, idx): return fc(idx) + m.predict(X.iloc[idx]) * cap(idx)   # fraction -> MW
+        def qp(m, idx): return fc(idx) + m.predict(X.iloc[idx]) * cap(idx)
 
         m_lo = train_quantile_model(X.iloc[fit], yn.iloc[fit], LO, X.iloc[es], yn.iloc[es])
         m_hi = train_quantile_model(X.iloc[fit], yn.iloc[fit], HI, X.iloc[es], yn.iloc[es])

@@ -1,4 +1,3 @@
-"""Leak-safety checks on the time-split harness."""
 import numpy as np
 import pandas as pd
 

@@ -1,7 +1,3 @@
-# scripts/02_baseline.py
-"""Confirm the harness: show the rolling folds + the raw-forecast baseline per fold.
-Run: PYTHONPATH=. python scripts/02_baseline.py
-"""
 from src.data import load_config, build_dataset
 from src.splits import rolling_origin_splits
 from src.metrics import rmse

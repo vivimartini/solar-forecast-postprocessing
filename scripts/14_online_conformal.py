@@ -1,11 +1,3 @@
-# scripts/14_online_conformal.py
-"""Online conformal (ACI, Gibbs & Candes 2021): update the offset Qm as we walk the
-validation block in time order, widening whenever we've been missing too often.
-This is what finally fixed coverage (74 -> 83%) -- offline conformal can't follow the
-drift, an online update can. With dispersion scaling on top, the width also lands
-where it's needed (volatile hours 0.776 -> 0.796, calm 0.892 -> 0.873).
-Run: PYTHONPATH=. python scripts/14_online_conformal.py
-"""
 import numpy as np, pandas as pd
 from src.data import load_config, build_dataset
 from src.features import make_features, RICH_FEATURES
@@ -27,16 +19,16 @@ def run(day, folds, scaled):
         m_lo = train_quantile_model(X.iloc[fit], yn.iloc[fit], LO, X.iloc[es], yn.iloc[es])
         m_hi = train_quantile_model(X.iloc[fit], yn.iloc[fit], HI, X.iloc[es], yn.iloc[es])
 
-        va = va[np.argsort(day.loc[va, "issued_at"].values)]           # process in time order
+        va = va[np.argsort(day.loc[va, "issued_at"].values)]
         qlo, qhi, y = qp(m_lo, va), qp(m_hi, va), day.loc[va, "actual_mw"].values
         u = (day.loc[va, "disp_mw"].fillna(med).clip(lower=med*0.2).values
-             if scaled else np.full(len(va), (qhi - qlo).mean() / 2))   # scale for the offset
+             if scaled else np.full(len(va), (qhi - qlo).mean() / 2))
         Qm, inside, w = 0.0, np.zeros(len(y), int), np.zeros(len(y))
         for t in range(len(y)):
             add = max(Qm, 0.0) * u[t]
             lo_t, hi_t = max(qlo[t] - add, 0.0), qhi[t] + add
             inside[t] = int(lo_t <= y[t] <= hi_t); w[t] = hi_t - lo_t
-            Qm += GAMMA * ((1 - inside[t]) - (1 - TARGET))   # miss -> widen, hit -> slowly shrink
+            Qm += GAMMA * ((1 - inside[t]) - (1 - TARGET))
         covs.append(inside.mean()); widths.append(w.mean())
         d = day.loc[va].copy(); d["_in"] = inside; rows.append(d[["disp_mw", "_in"]])
     allrows = pd.concat(rows).dropna(subset=["disp_mw"])

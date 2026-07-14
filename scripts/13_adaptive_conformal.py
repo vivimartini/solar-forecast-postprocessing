@@ -1,11 +1,3 @@
-# scripts/13_adaptive_conformal.py
-"""Dispersion-scaled conformal: scale the conformal offset by disp_mw so calm hours
-get tight intervals and volatile hours get wide ones.
-Didn't work as hoped -- made conditional coverage WORSE (volatile 0.725 -> 0.651).
-13b tracks down why: Q goes negative on early folds, and scaling amplifies a
-wrong-signed correction. Kept because the failure is instructive.
-Run: PYTHONPATH=. python scripts/13_adaptive_conformal.py
-"""
 import numpy as np, pandas as pd
 from src.data import load_config, build_dataset
 from src.features import make_features, RICH_FEATURES
@@ -27,13 +19,13 @@ def run(day, folds, adaptive):
         fc = lambda i: day.loc[i, "fc_mw"].values; cap = lambda i: day.loc[i, "cap_mw"].values
         def qp(m, i): return fc(i) + m.predict(X.iloc[i]) * cap(i)
         u = lambda i: (day.loc[i, "disp_mw"].fillna(med).clip(lower=med*0.2).values
-                       if adaptive else np.ones(len(i)))                    # per-row scale
+                       if adaptive else np.ones(len(i)))
 
         m_lo = train_quantile_model(X.iloc[fit], yn.iloc[fit], LO, X.iloc[es], yn.iloc[es])
         m_hi = train_quantile_model(X.iloc[fit], yn.iloc[fit], HI, X.iloc[es], yn.iloc[es])
 
         y_cal = day.loc[cal, "actual_mw"].values
-        E = np.maximum(qp(m_lo, cal) - y_cal, y_cal - qp(m_hi, cal)) / u(cal)   # scaled score
+        E = np.maximum(qp(m_lo, cal) - y_cal, y_cal - qp(m_hi, cal)) / u(cal)
         level = min(1.0, np.ceil((len(E)+1)*(1-ALPHA))/len(E)); Q = np.quantile(E, level)
 
         y = day.loc[va, "actual_mw"].values; uv = u(va)

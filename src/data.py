@@ -1,13 +1,4 @@
-# src/data.py
-"""Load, align and clean the forecast + actuals data.
-
-Key decisions (see DECISIONS.md):
-- Forecasts are in GW, actuals in MW -> multiply forecast by 1000 to compare.
-- Operational lead = step - issued_at (when the forecast is actually usable),
-  NOT step - init_time. Rows with lead <= 0 are dropped (valid time already past).
-- Actuals are 15-min instantaneous snapshots; the forecast is "generation within
-  the hour", so we average the four snapshots in each hour to line them up.
-"""
+"""Load and align forecast + actuals. GW->MW, operational lead, hourly actuals."""
 import yaml
 import numpy as np
 import pandas as pd
@@ -29,15 +20,12 @@ def load_raw(cfg):
 
 
 def hourly_actuals(actuals):
-    """15-min instantaneous snapshots -> hourly mean (MW), matching the
-    forecast's 'generation within the hour' definition."""
     return (actuals.set_index("time")["value"]
                    .resample("1h").mean()
                    .rename("actual_mw"))
 
 
 def prepare_forecasts(forecasts):
-    """Add reconciled units (GW->MW) and both lead definitions."""
     fc = forecasts.copy()
     fc["fc_mw"] = fc["value"] * 1000.0
     fc["op_lead_h"] = (fc["step"] - fc["issued_at"]).dt.total_seconds() / 3600
@@ -50,15 +38,11 @@ def add_solar_position(df, cfg):
     idx = pd.DatetimeIndex(df["step"])
     df = df.copy()
     df["solar_elevation"] = loc.get_solarposition(idx)["elevation"].values
-    df["clearsky_ghi"] = loc.get_clearsky(idx)["ghi"].values     # no-cloud ceiling for this hour
+    df["clearsky_ghi"] = loc.get_clearsky(idx)["ghi"].values
     return df
 
 
 def add_forecast_shape(forecasts, group_col="issued_at"):
-    """fc_prev1h / fc_next1h = the same run's forecast one hour either side of step.
-    Fine to use at issue time (the whole run is published at once).
-    NB: positional shift assumes each run's steps are contiguous hourly — checked, they are
-    (no gaps or duplicate steps in any issued_at group)."""
     f = forecasts.sort_values([group_col, "step"]).copy()
     g = f.groupby(group_col)["fc_mw"]
     f["fc_prev1h"] = g.shift(1)
@@ -66,24 +50,22 @@ def add_forecast_shape(forecasts, group_col="issued_at"):
     return f
 
 def add_next_revision(forecasts):
-    """next_revision = next issuance's forecast minus this one, same valid hour.
-    Label for metric (b) only -- it's future info, must never go in as a feature."""
+    """Label for metric (b) only — future info, not a feature."""
     f = forecasts.sort_values(["step", "issued_at"]).copy()
     f["next_revision"] = f.groupby("step")["fc_mw"].shift(-1) - f["fc_mw"]
     return f
 
 
 def build_dataset(cfg, lead_band=None):
-    """One clean row per forecast case, joined to its hourly actual."""
     fc, ac = load_raw(cfg)
     fc = prepare_forecasts(fc)
-    fc = add_dispersion(fc, k=cfg["lagged_ensemble"]["k_default"])   
-    fc = add_capacity_proxy(fc, window_days=cfg["capacity"]["window_days"])   # fleet proxy
-    fc = add_forecast_shape(fc) 
-    fc = add_next_revision(fc)    
+    fc = add_dispersion(fc, k=cfg["lagged_ensemble"]["k_default"])
+    fc = add_capacity_proxy(fc, window_days=cfg["capacity"]["window_days"])
+    fc = add_forecast_shape(fc)
+    fc = add_next_revision(fc)
 
     lo, hi = lead_band or cfg["lead_band_h"]
-    fc = fc[(fc["op_lead_h"] > lo) & (fc["op_lead_h"] <= hi)]        # usable leads only
+    fc = fc[(fc["op_lead_h"] > lo) & (fc["op_lead_h"] <= hi)]
 
     ah = hourly_actuals(ac)
     df = (fc.merge(ah, left_on="step", right_index=True, how="inner")
@@ -91,7 +73,6 @@ def build_dataset(cfg, lead_band=None):
 
     df = add_solar_position(df, cfg)
     df["is_day"] = df["solar_elevation"] > cfg["daytime_elevation_deg"]
-    df["residual_mw"] = df["actual_mw"] - df["fc_mw"]  
-    df["residual_norm"] = df["residual_mw"] / df["cap_mw"]                    # error as fraction of fleet       
-    return df.sort_values(["issued_at", "step"]).reset_index(drop=True)  #for reproducibility
-
+    df["residual_mw"] = df["actual_mw"] - df["fc_mw"]
+    df["residual_norm"] = df["residual_mw"] / df["cap_mw"]
+    return df.sort_values(["issued_at", "step"]).reset_index(drop=True)

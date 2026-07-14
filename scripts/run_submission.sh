@@ -1,5 +1,4 @@
 #!/usr/bin/env bash
-# Minimal reproduction path for a reviewer.
 set -euo pipefail
 export PYTHONPATH=.
 

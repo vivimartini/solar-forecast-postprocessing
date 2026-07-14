@@ -1,10 +1,3 @@
-# scripts/06_conformal.py
-"""Layer 2 calibration -- CQR (conformalized quantile regression).
-Attempt to close the 72% vs 80% coverage gap from 05. Only got partway (74%):
-the cal slice sits in the past relative to validation, so drift breaks
-exchangeability and Q comes out too small. See DECISIONS.md.
-Run: PYTHONPATH=. python scripts/06_conformal.py
-"""
 import numpy as np
 from src.data import load_config, build_dataset
 from src.features import make_features, BASE_FEATURES
@@ -12,7 +5,7 @@ from src.splits import rolling_origin_splits
 from src.models import train_quantile_model
 from src.metrics import pinball_loss, coverage, interval_width
 
-LO, MID, HI, ALPHA = 0.1, 0.5, 0.9, 0.2   # nominal 80% interval
+LO, MID, HI, ALPHA = 0.1, 0.5, 0.9, 0.2
 
 
 def run(day, cols, folds):
@@ -28,7 +21,6 @@ def run(day, cols, folds):
         m_hi = train_quantile_model(X.iloc[fit], y.iloc[fit], HI, X.iloc[es], y.iloc[es])
         m_md = train_quantile_model(X.iloc[fit], y.iloc[fit], MID, X.iloc[es], y.iloc[es])
 
-        # conformal width adjustment from the calibration slice (CQR)
         y_cal = day.loc[cal, "actual_mw"].values
         E = np.maximum(q(m_lo, cal) - y_cal, y_cal - q(m_hi, cal))
         level = min(1.0, np.ceil((len(E) + 1) * (1 - ALPHA)) / len(E))

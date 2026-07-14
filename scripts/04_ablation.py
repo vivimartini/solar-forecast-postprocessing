@@ -1,8 +1,3 @@
-# scripts/04_ablation.py
-"""Ablation: does lagged-ensemble dispersion improve OUT-OF-SAMPLE point skill?
-Runs the point model with and without disp_mw on identical folds.
-Run: PYTHONPATH=. python scripts/04_ablation.py
-"""
 import numpy as np
 from src.data import load_config, build_dataset
 from src.features import make_features, BASE_FEATURES

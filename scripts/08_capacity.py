@@ -1,7 +1,3 @@
-# scripts/08_capacity.py
-"""Does a fleet-normalized target beat the raw-MW target on point skill?
-Trains on residual/capacity, reconstructs MW, compares. Run: PYTHONPATH=. python scripts/08_capacity.py
-"""
 import numpy as np
 from src.data import load_config, build_dataset
 from src.features import make_features, BASE_FEATURES
@@ -21,7 +17,7 @@ def evaluate(day, folds, normalized):
                                      X.iloc[val_in], target.iloc[val_in])
         pred = model.predict(X.iloc[va])
         if normalized:
-            pred = pred * day.loc[va, "cap_mw"].values          # fraction -> MW
+            pred = pred * day.loc[va, "cap_mw"].values
         corrected = np.clip(day.loc[va, "fc_mw"].values + pred, 0, None)
         actual = day.loc[va, "actual_mw"].values
         skills.append(skill_score(rmse(actual, corrected),

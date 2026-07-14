@@ -1,10 +1,3 @@
-# scripts/10_final_test.py
-"""FINAL evaluation on the sealed test set (touched once).
-Point = online bias + optional GBDT on the de-biased residual.
-Intervals = quantile GBDTs + online ACI with dispersion scaling.
-Also dumps outputs/predictions.csv for make_figures.py.
-Run: PYTHONPATH=. python scripts/10_final_test.py
-"""
 from pathlib import Path
 import numpy as np, pandas as pd
 from src.data import load_config, build_dataset
@@ -20,7 +13,7 @@ LO, HI, TARGET, GAMMA = 0.1, 0.9, 0.8, 0.05
 def main():
     cfg = load_config(); day = build_dataset(cfg); day = day[day.is_day].reset_index(drop=True)
     ob = cfg["online_bias"]
-    day = add_online_bias(day, window_days=ob["window_days"], per_hour=ob["per_hour"])  # adaptive point correction
+    day = add_online_bias(day, window_days=ob["window_days"], per_hour=ob["per_hour"])
     day["residual_debias"] = day["residual_mw"] - day["online_bias"]
     X, _ = make_features(day, feature_cols=RICH_FEATURES); yn = day["residual_norm"]
     med = day["disp_mw"].median()
@@ -30,15 +23,14 @@ def main():
     ds = dev[np.argsort(day.loc[dev, "issued_at"].values)]
     cut = int(0.85*len(ds)); fit, es = ds[:cut], ds[cut:]
     test = np.where(test_mask)[0]
-    test = test[np.argsort(day.loc[test, "issued_at"].values)]        # time order for ACI
+    test = test[np.argsort(day.loc[test, "issued_at"].values)]
 
     fc = lambda i: day.loc[i, "fc_mw"].values; cap = lambda i: day.loc[i, "cap_mw"].values
     actual = day.loc[test, "actual_mw"].values
 
-    corrected = np.clip(fc(test) + day.loc[test, "online_bias"].values, 0, None)   # adaptive point model
+    corrected = np.clip(fc(test) + day.loc[test, "online_bias"].values, 0, None)
     base_rmse, mod_rmse = rmse(actual, fc(test)), rmse(actual, corrected)
 
-    # GBDT on what's left after online bias (trained on dev only)
     y_deb = day["residual_debias"]
     gbdt = train_residual_model(X.iloc[fit], y_deb.iloc[fit], X.iloc[es], y_deb.iloc[es])
     corrected2 = np.clip(fc(test) + day.loc[test, "online_bias"].values + gbdt.predict(X.iloc[test]), 0, None)
@@ -57,7 +49,7 @@ def main():
         p10[t], p90[t] = lo_t, hi_t
         inside[t] = int(lo_t <= actual[t] <= hi_t); w[t] = hi_t - lo_t
         Qm += GAMMA * ((1-inside[t]) - (1-TARGET))
-    
+
     Path("outputs").mkdir(exist_ok=True)
     pred = day.loc[test, ["issued_at", "step", "op_lead_h", "disp_mw"]].copy()
     pred["fc_mw"] = fc(test)

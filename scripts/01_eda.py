@@ -1,6 +1,3 @@
-# scripts/01_eda.py
-"""Exploratory diagnostics: understand the data and lock the baseline.
-"""
 from pathlib import Path
 import numpy as np
 import matplotlib
