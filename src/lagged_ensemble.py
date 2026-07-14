@@ -1,10 +1,10 @@
 # src/lagged_ensemble.py
-"""Signature feature: lagged-ensemble dispersion.
+"""Lagged-ensemble dispersion.
 
-For a forecast issued at t0 for valid hour `step`, the lagged ensemble is the set of
-EARLIER forecasts for the same `step`, issued strictly before t0. Their spread (std) is
-a leak-safe proxy for forecast uncertainty: agreement -> settled weather, disagreement
--> volatile. Built in issuance order, using the latest k prior members.
+Idea: every valid hour gets forecast several times by successive issuances, so the
+earlier runs form a free poor-man's ensemble. If they disagree (high std), the weather
+situation is unsettled and the current forecast is probably less trustworthy.
+Only uses runs issued strictly before the current one, so safe at issue time.
 """
 import pandas as pd
 
