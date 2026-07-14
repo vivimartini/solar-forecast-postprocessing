@@ -1,7 +1,7 @@
 # scripts/make_figures.py
-"""Figures from the sealed-test predictions (outputs/predictions.csv).
-Shows the model, its uncertainty, and that the uncertainty is INFORMATIVE — the kind of
-information a desk uses to judge how much to trust each hour (not a trade instruction).
+"""Figures for the write-up, built from outputs/predictions.csv (run 10_final_test.py first).
+Three plots: fan charts for a calm vs volatile day, a reliability plot, and error by
+band width -- i.e. does the model know when it doesn't know.
 Run: PYTHONPATH=. python scripts/make_figures.py
 """
 import pandas as pd, numpy as np
@@ -12,7 +12,7 @@ p["date"] = p.step.dt.floor("D")
 p["abserr"] = (p.actual_mw - p.corrected).abs()
 p["width"] = p.p90 - p.p10
 
-# --- Fig 1: fan charts — a settled day and a volatile day (the band breathes with uncertainty) ---
+# fig 1: fan charts, least vs most dispersed day in the test window
 dd = p.groupby("date")["disp"].mean()
 days = [(dd.idxmin(), "a settled day"), (dd.idxmax(), "a volatile day")]
 fig, axes = plt.subplots(1, 2, figsize=(12, 4.4), sharey=True)
