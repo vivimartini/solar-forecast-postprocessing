@@ -13,7 +13,7 @@ def add_online_bias(df, window_days=60, per_hour=True, out_col="online_bias"):
         rolled = piv.rolling(f"{window_days}D", min_periods=3).mean().shift(1).ffill()
         rs = rolled.stack().rename("_b").reset_index()
         rs.columns = ["_bday", "_hour", "_b"]
-        merged = d.merge(rs, left_on=["_iday", "_hour"], right_on=["_bday", "_hour"], how="left")
+        merged = d.merge(rs, left_on=["_iday", "_hour"], right_on=["_bday", "_hour"], how="left")  # bias keyed to issue day
         out = df.copy(); out[out_col] = merged["_b"].fillna(0.0).values
     else:
         daily = d.groupby("_vday")["_r"].mean().sort_index()

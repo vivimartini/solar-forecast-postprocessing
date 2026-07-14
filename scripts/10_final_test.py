@@ -28,14 +28,17 @@ def main():
     fc = lambda i: day.loc[i, "fc_mw"].values; cap = lambda i: day.loc[i, "cap_mw"].values
     actual = day.loc[test, "actual_mw"].values
 
+    # --- point: online bias (shipped) ---
     corrected = np.clip(fc(test) + day.loc[test, "online_bias"].values, 0, None)
     base_rmse, mod_rmse = rmse(actual, fc(test)), rmse(actual, corrected)
 
+    # --- point: bias + GBDT on de-biased residual (not shipped, sealed negative) ---
     y_deb = day["residual_debias"]
     gbdt = train_residual_model(X.iloc[fit], y_deb.iloc[fit], X.iloc[es], y_deb.iloc[es])
     corrected2 = np.clip(fc(test) + day.loc[test, "online_bias"].values + gbdt.predict(X.iloc[test]), 0, None)
     mod2_rmse = rmse(actual, corrected2)
 
+    # --- intervals: quantile GBDT + online ACI, dispersion-scaled width ---
     def qp(m, i): return fc(i) + m.predict(X.iloc[i]) * cap(i)
     m_lo = train_quantile_model(X.iloc[fit], yn.iloc[fit], LO, X.iloc[es], yn.iloc[es])
     m_hi = train_quantile_model(X.iloc[fit], yn.iloc[fit], HI, X.iloc[es], yn.iloc[es])

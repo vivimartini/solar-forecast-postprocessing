@@ -20,6 +20,7 @@ def load_raw(cfg):
 
 
 def hourly_actuals(actuals):
+    # actuals are 15-min snapshots; forecast is hourly generation -> mean to align
     return (actuals.set_index("time")["value"]
                    .resample("1h").mean()
                    .rename("actual_mw"))
@@ -28,8 +29,8 @@ def hourly_actuals(actuals):
 def prepare_forecasts(forecasts):
     fc = forecasts.copy()
     fc["fc_mw"] = fc["value"] * 1000.0
-    fc["op_lead_h"] = (fc["step"] - fc["issued_at"]).dt.total_seconds() / 3600
-    fc["model_age_h"] = (fc["step"] - fc["init_time"]).dt.total_seconds() / 3600
+    fc["op_lead_h"] = (fc["step"] - fc["issued_at"]).dt.total_seconds() / 3600   # usable lead
+    fc["model_age_h"] = (fc["step"] - fc["init_time"]).dt.total_seconds() / 3600  # model run age
     return fc
 
 
@@ -65,7 +66,7 @@ def build_dataset(cfg, lead_band=None):
     fc = add_next_revision(fc)
 
     lo, hi = lead_band or cfg["lead_band_h"]
-    fc = fc[(fc["op_lead_h"] > lo) & (fc["op_lead_h"] <= hi)]
+    fc = fc[(fc["op_lead_h"] > lo) & (fc["op_lead_h"] <= hi)]  # drop lead<=0 (valid time passed)
 
     ah = hourly_actuals(ac)
     df = (fc.merge(ah, left_on="step", right_index=True, how="inner")

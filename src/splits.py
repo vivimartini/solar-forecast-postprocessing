@@ -20,6 +20,6 @@ def rolling_origin_splits(df, n_folds, embargo_days, sealed_test_frac, time_col=
     for i in range(1, n_folds + 1):
         val_start, val_end = edges[i], edges[i + 1]
         val = (t >= val_start) & (t < val_end)
-        train = t < (val_start - embargo)
+        train = t < (val_start - embargo)  # gap so backward-looking features don't peek
         folds.append((np.where(train.values)[0], np.where(val.values)[0]))
     return folds, np.where(test_mask)[0]
