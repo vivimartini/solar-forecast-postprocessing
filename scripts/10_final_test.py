@@ -51,17 +51,15 @@ def main():
         inside[t] = int(lo_t <= actual[t] <= hi_t); w[t] = hi_t - lo_t
         Qm += GAMMA * ((1-inside[t]) - (1-TARGET))
     
-    from pathlib import Path
-    import pandas as pd
     Path("outputs").mkdir(exist_ok=True)
     pd.DataFrame({
         "issued_at": day.loc[test, "issued_at"].values,
         "step":      day.loc[test, "step"].values,
         "fc_mw":     fc(test),
-        "corrected": corrected,          # per-hour-bias corrected point forecast
-        "p10": p10, "p90": p90,          # online-ACI interval
+        "corrected": corrected,
+        "p10": p10, "p90": p90,
         "actual_mw": actual,
-        "disp":      day.loc[test, "disp_mw"].values,   # instability signal
+        "disp":      day.loc[test, "disp_mw"].values,
     }).to_csv("outputs/predictions.csv", index=False)
 
     print("=== SEALED TEST (touched once) ===")
