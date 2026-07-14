@@ -60,3 +60,31 @@
 - disp_mw STILL null on calibrated intervals too (pinball −0.9%, coverage/width flat) → drop it for good.
 - NEXT for 80% coverage: weighted/adaptive conformal (recency-weight cal residuals) or capacity-normalised
   target (aligns past/future dists, helps point skill AND exchangeability). Drift inflation = band-aid.
+
+## Capacity normalisation (scripts/08_capacity.py)
+- Fleet proxy = trailing 60d peak of the forecast (shift(1), leak-safe). residual_norm = residual/cap.
+- CV: MW target +0.88% → normalised +1.09%. Helps the fleet-growth folds (1,2,4); fold 3 (season) still negative.
+- Sealed test: normalised −14.79% vs raw-MW −9.79% — normalisation amplifies but doesn't cause the failure.
+
+## Rich features (scripts/11_features.py)
+- Shape: fc_ramp, fc_curv, fc_over_cs + clearsky_ghi. CV: base +1.09% → rich +1.30%.
+- add_forecast_shape audited: 0 mismatches vs time-based truth on 1.74M rows (positional shift is fine here).
+- Sealed test: rich vs base only 0.4pp apart on the static GBDT — not the −15% culprit.
+
+## Metric (b) — revision / confidence (scripts/metric_b.py)
+- next_revision = next issuance's fc − current fc, same valid hour. Direction ≈ coin flip (50.6% up).
+- Spearman(disp, |next revision|) = 0.443. Dispersion helps here: MAE 222.7 → 219.9 MW (only place it helps).
+- Answer to brief: bounds are symmetric, sized by instability; direction is unpredictable.
+
+## Conformal arc (scripts/06, 09, 13, 13b, 14)
+- Raw quantile intervals: 71.9% coverage (undercover). Fleet-normalised target alone → 77.1% without conformal.
+- Offline CQR: 74.1% — cal slice in the past, drift breaks exchangeability. 13b: Q < 0 on folds 1-2 (narrows when should widen).
+- Dispersion-scaled offline conformal (13): made conditional coverage WORSE (volatile 0.725 → 0.651).
+- Online ACI (14): 83.2% marginal; dispersion-scaled 82.9% with better conditional balance (volatile 0.776 → 0.796).
+
+## Sealed test — final deliverable (scripts/10_final_test.py)
+- Window: 2025-09-24 → 2026-05-31, 14,284 daytime rows, touched once.
+- Static GBDT (rich, normalised): −15.18% skill. Diagnosis: bias flips +157 MW (dev) → −320 MW (test), progressive 2026 drift.
+- Online per-hour bias (60d window): **+1.28%** skill. Intervals (online ACI + dispersion): **79.1%** coverage.
+- Conditional coverage calm/mid/volatile: 0.82 / 0.79 / 0.77. |error| by instability: 801 → 1412 → 1725 MW.
+- Headline: adaptivity beats static under non-stationarity. Point correction is modest; uncertainty layer generalises.

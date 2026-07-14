@@ -69,10 +69,14 @@ to ~80% coverage on data it never saw.
 | | |
 |---|---|
 | point skill vs raw forecast | +1.28% |
+| by lead band (0–6 / 6–12 / 12–24 / 24–36h) | +1.72 / +0.89 / +1.33 / +1.24% |
 | P10–P90 coverage | 79.1% (target 80%) |
 | coverage by regime (calm / mid / volatile) | 0.82 / 0.79 / 0.77 |
 | disagreement vs next-revision size (Spearman) | 0.44 |
 | forecast error, calm → volatile hours | 801 → 1412 → 1725 MW |
+
+Monthly skill stays positive through late 2025, dips in parts of early 2026 as the bias keeps drifting
+(see `outputs/fig_monthly_skill.png`) — the online tracker follows most of it but not perfectly.
 
 ## The lagged-ensemble idea
 
@@ -88,4 +92,43 @@ sized by instability. That's the direct answer to metric (b).
 
 My background is physics-informed ML, so I did try the physical features — clear-sky irradiance, solar
 geometry, a clear-sky-scaled forecast term. None helped out of sample, and I think the reason is the
-honest one: I'm correcting a forecast that's *already* physics-based, so the diurnal arc and
+honest one: I'm correcting a forecast that's *already* physics-based, so the diurnal arc and cloud
+response are largely baked in. The remaining error is mostly bias drift and weather volatility, which
+is why the adaptive pieces ended up mattering more than more physics features.
+
+## How to run
+
+```bash
+pip install -r requirements.txt
+# put forecasts.parquet + actuals.parquet in data/
+
+PYTHONPATH=. python scripts/00_scope_analysis.py   # why 0-36h not 168-360h
+PYTHONPATH=. python scripts/01_eda.py            # baseline + eda plot
+PYTHONPATH=. python scripts/02_baseline.py       # check the CV harness
+PYTHONPATH=. python scripts/10_final_test.py     # sealed test (run once)
+PYTHONPATH=. python scripts/make_figures.py      # figures from predictions.csv
+PYTHONPATH=. python -m pytest tests/ -q          # metrics + leak-safety checks
+
+# or the one-liner:
+./scripts/run_submission.sh
+```
+
+The experiment trail lives in `scripts/03`–`14` and `metric_b.py` if you want to follow the iteration
+(GBDT overfit → regularisation → dispersion ablation → conformal failures → online ACI → online bias).
+`DECISIONS.md` is the lab notebook.
+
+## Repo map
+
+```
+src/          data loading, features, models, splits, online_bias, dispersion
+scripts/      numbered experiment scripts + 10_final_test + make_figures
+tests/        unit tests for metrics and leak-safety of the eval harness
+config.yaml   paths, lead band, validation scheme, online_bias settings
+outputs/      eda plot + sealed-test figures (regenerated, gitignored)
+```
+
+## What I'd do next
+
+- Revisit the static GBDT on top of the online-bias residual (de-biased target might be stationary enough now).
+- Recency-weighted conformal instead of a fixed cal slice, to close the last ~1pt of coverage without overshooting.
+- Explicit revision quantiles for metric (b) (P10/P90 of the next update, not just |revision| MAE).

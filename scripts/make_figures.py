@@ -1,7 +1,6 @@
 # scripts/make_figures.py
 """Figures for the write-up, built from outputs/predictions.csv (run 10_final_test.py first).
-Three plots: fan charts for a calm vs volatile day, a reliability plot, and error by
-band width -- i.e. does the model know when it doesn't know.
+Four plots: fan charts, reliability, error vs band width, monthly skill on sealed test.
 Run: PYTHONPATH=. python scripts/make_figures.py
 """
 import pandas as pd, numpy as np
@@ -48,4 +47,26 @@ ax.set(ylabel="actual forecast error (MW)",
        title="The uncertainty is meaningful:\nwhen the model's band is wide, the forecast really is less accurate")
 ax.grid(axis="y", alpha=.25); fig.tight_layout(); fig.savefig("outputs/fig_uncertainty_informative.png", dpi=120)
 
-print("saved 3 figures to outputs/")
+# fig 4: monthly skill on the sealed test -- shows the bias-flip / drift story
+p["ym"] = p.step.dt.to_period("M").astype(str)
+monthly = []
+for ym, g in p.groupby("ym"):
+    base = np.sqrt(np.mean((g.actual_mw - g.fc_mw) ** 2))
+    mod = np.sqrt(np.mean((g.actual_mw - g.corrected) ** 2))
+    monthly.append((ym, 100 * (1 - mod / base), len(g)))
+monthly.sort()
+fig, ax = plt.subplots(figsize=(7, 3.8))
+xs = np.arange(len(monthly))
+skills = [m[1] for m in monthly]
+colors = ["#2c6e6e" if s >= 0 else "#c0392b" for s in skills]
+ax.bar(xs, skills, color=colors)
+ax.axhline(0, color="#888", lw=0.8)
+ax.set_xticks(xs)
+ax.set_xticklabels([m[0] for m in monthly], rotation=35, ha="right")
+for i, (_, sk, n) in enumerate(monthly):
+    ax.text(i, sk + (1.5 if sk >= 0 else -1.5), f"{sk:+.1f}%", ha="center", va="bottom" if sk >= 0 else "top", fontsize=8)
+ax.set(ylabel="point skill vs raw (%)",
+       title="Sealed-test skill by month — positive early, drifts negative through 2026")
+ax.grid(axis="y", alpha=.25); fig.tight_layout(); fig.savefig("outputs/fig_monthly_skill.png", dpi=120)
+
+print("saved 4 figures to outputs/")

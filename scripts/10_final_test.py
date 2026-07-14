@@ -52,20 +52,36 @@ def main():
         Qm += GAMMA * ((1-inside[t]) - (1-TARGET))
     
     Path("outputs").mkdir(exist_ok=True)
-    pd.DataFrame({
-        "issued_at": day.loc[test, "issued_at"].values,
-        "step":      day.loc[test, "step"].values,
-        "fc_mw":     fc(test),
-        "corrected": corrected,
-        "p10": p10, "p90": p90,
-        "actual_mw": actual,
-        "disp":      day.loc[test, "disp_mw"].values,
-    }).to_csv("outputs/predictions.csv", index=False)
+    pred = day.loc[test, ["issued_at", "step", "op_lead_h", "disp_mw"]].copy()
+    pred["fc_mw"] = fc(test)
+    pred["corrected"] = corrected
+    pred["p10"] = p10
+    pred["p90"] = p90
+    pred["actual_mw"] = actual
+    pred.rename(columns={"disp_mw": "disp"}, inplace=True)
+    pred.to_csv("outputs/predictions.csv", index=False)
 
     print("=== SEALED TEST (touched once) ===")
     print(f"rows {len(test)} | {day.loc[test,'issued_at'].min().date()} -> {day.loc[test,'issued_at'].max().date()}")
     print(f"POINT:     baseline RMSE {base_rmse:7.1f} -> model {mod_rmse:7.1f} | skill {skill_score(mod_rmse, base_rmse)*100:+.2f}%")
     print(f"INTERVALS: coverage {inside.mean()*100:5.1f}% | width {w.mean():7.1f}")
+
+    print("\nPOINT skill by lead band:")
+    for lo, hi in [(0, 6), (6, 12), (12, 24), (24, 36)]:
+        m = (day.loc[test, "op_lead_h"] > lo) & (day.loc[test, "op_lead_h"] <= hi)
+        if not m.any():
+            continue
+        a, f, c = actual[m], fc(test)[m], corrected[m]
+        print(f"  {lo:2d}-{hi:2d}h  n={int(m.sum()):5d}  skill {skill_score(rmse(a, c), rmse(a, f))*100:+6.2f}%")
+
+    print("\nPOINT skill by month (bias drift visible here):")
+    t = day.loc[test, ["step", "actual_mw", "fc_mw"]].copy()
+    t["corrected"] = corrected
+    t["ym"] = t.step.dt.to_period("M").astype(str)
+    for ym, g in t.groupby("ym"):
+        sk = skill_score(rmse(g.actual_mw, g.corrected), rmse(g.actual_mw, g.fc_mw)) * 100
+        print(f"  {ym}: skill {sk:+6.2f}%  n={len(g):5d}")
+
     t = day.loc[test].copy(); t["_in"] = inside; t["abserr"] = np.abs(actual - fc(test))
     t = t.dropna(subset=["disp_mw"]); t["band"] = pd.qcut(t["disp_mw"], 3, labels=["calm", "mid", "volatile"])
     print("  conditional coverage:", t.groupby("band", observed=True)["_in"].mean().round(3).to_dict())
