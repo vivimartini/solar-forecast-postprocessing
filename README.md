@@ -6,8 +6,8 @@ systematic error where possible, and attach honest **predictive intervals** (met
 **Headline:** a static GBDT correction looks fine in CV then scores **−15.2%** on a chronological
 walk-forward evaluation — bias drift. An adaptive per-hour bias tracker recovers that to **+1.28%**
 vs the raw forecast, but a block bootstrap shows that gain is **not statistically significant**
-(95% CI includes zero). The robust result is **avoiding the static-model failure**; the intervals
-layer generalises better (**79.1%** P10–P90 coverage).
+(95% CI includes zero). The robust result is **avoiding the static-model failure**; the uncertainty
+layer performs more robustly in the walk-forward backtest, reaching **79.1%** P10–P90 coverage.
 
 ## Scope
 
@@ -59,14 +59,13 @@ from zero**. The value is not overclaiming a point gain; it is that adaptivity *
 
 GBDT on the de-biased residual: **−2.53%** — still hurts OOS. Point deliverable = online bias only.
 
-**Predictive intervals:** quantile GBDT base layer. Tried static offline conformal calibration first —
-it restored near-nominal coverage on walk-forward evaluation (**81.2%**), but produced wider intervals
-and a worse interval score than the adaptive online procedure. Compared static conformal with online
-ACI: static conformal restored marginal coverage, while online ACI achieved comparable near-nominal
-coverage (**79.1%**, target 80%) with a substantially better interval score — a better
-calibration–sharpness trade-off under drift. Dispersion scaling on top; mean width **4,452 MW**
-(~4.45 GW). Interval width ranks realised error — 643 / 1,327 / 1,923 MW MAE across narrow / medium /
-wide terciles (see `fig_uncertainty_informative.png`).
+**Predictive intervals:** the quantile-GBDT base layer under-covers. Static offline conformal restores
+near-nominal coverage on the walk-forward evaluation (**81.2%**) but produces wider intervals and a
+worse interval score. Online ACI achieves comparable near-nominal coverage (**79.1%** against an 80%
+target) with a substantially lower interval score, giving the better calibration–sharpness trade-off
+under drift. With dispersion scaling, mean width is **4,452 MW**; interval width also ranks realised
+difficulty, with MAE of 643 / 1,327 / 1,923 MW across narrow / medium / wide terciles
+(see `fig_uncertainty_informative.png`).
 
 ## Results (walk-forward evaluation)
 

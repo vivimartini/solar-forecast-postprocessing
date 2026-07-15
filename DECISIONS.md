@@ -16,7 +16,8 @@ comparable across time — same size error looks tiny early and huge late, just 
 relative RMSE skill vs the contemporaneous forecast instead of raw MW.
 
 Scope: brief wants 0–36h or 168–360h. Ran the correction on both — helps at short (+1.28%), hurts at long
-(−1.81%). So the long-range error is basically noise, nothing transferable to correct. Went 0–36h.
+(−1.81%). The tested adaptive correction does not find stable transferable residual structure at long
+range, so I scoped the main analysis to 0–36h.
 
 Daytime = solar elevation > 5° (pvlib). Wanted something geometric so nothing from the actuals leaks in.
 
@@ -29,10 +30,10 @@ For the online bias I assume yesterday's ENTSO-E actuals are in by the next issu
 the shift(1) encodes.
 
 Tried LightGBM on the residual. +0.9% in CV, looked fine. Then −15.2% on the walk-forward. Ouch.
-Took a while to see why. CV was honest so it's not normal overfitting — it's the target moving. Mean
-residual is +152 MW on dev and −320 MW on eval. The bias flips sign. Frozen model learns "forecast runs
-low, add MW", then the forecast starts running high and it corrects the wrong way. That's basically the
-whole finding.
+Took a while to see why. The temporal CV was leakage-safe, but the later failure is dominated by target
+drift: the mean residual changes from +152 MW in development to −320 MW in evaluation, so the frozen
+correction acts in the wrong direction. Frozen model learns "forecast runs low, add MW", then the
+forecast starts running high and it corrects the wrong way. That's basically the whole finding.
 
 So dropped the frozen model, just track the recent bias instead — trailing 60d mean of residuals,
 shift(1) so today doesn't see itself. Did it per hour-of-day since the drift isn't uniform through the
@@ -51,21 +52,20 @@ Tried to get more out of the point forecast, nothing worked:
 - GBDT on the de-biased residual: −2.53%. Leftover structure drifts too.
 - Capacity-normalising the residual first (divide by a capacity proxy — running upper envelope of
   generation): no help.
-- Physics features (clear-sky, geometry): nothing robust. Makes sense — I'm post-processing an NWP
-  forecast that already has the physics in it; the leftover error is scale growth + drift, not physical.
+- Physics features (clear-sky, geometry): did not add robust out-of-sample value. Plausible because the
+  supplied NWP-driven forecast already encodes much of the deterministic solar structure, while the
+  remaining residual is dominated in this sample by non-stationary bias and scale effects.
 So point deliverable is just the online bias.
 
 Physical bounds: the additive correction can push the point forecast slightly below 0 at dawn/dusk
 (~0.02% of rows), and P10 more often. Clip everything to [0, capacity].
 
-Uncertainty (metric b, and the better half). Quantile GBDT for P10/P90 (80% central interval).
-Tried static offline conformal calibration first — restored near-nominal coverage on walk-forward eval
-(81.2%), but wider intervals and worse interval score than adaptive online ACI. Compared static
-conformal with online ACI: static restored marginal coverage; online ACI hit 79.1% with substantially
-better interval score — better calibration–sharpness trade-off under drift. Dispersion scaling on top.
-Width ~4.45 GW. Sort quantiles so they don't cross. Coverage by regime 82 / 79 / 77, roughly even.
-Width is informative: bucket by width and MAE goes 643 → 1327 → 1923. Tells you when to distrust the
-forecast.
+Uncertainty (metric b, and the better half). Quantile GBDT for P10/P90 (80% central interval); the base
+layer under-covers. Static offline conformal restores near-nominal coverage on walk-forward eval
+(81.2%) but wider intervals and worse interval score. Online ACI hits 79.1% with a substantially lower
+interval score — better calibration–sharpness trade-off under drift. Dispersion scaling on top. Width
+~4.45 GW. Sort quantiles so they don't cross. Coverage by regime 82 / 79 / 77, roughly even. Width is
+informative: bucket by width and MAE goes 643 → 1327 → 1923. Tells you when to distrust the forecast.
 
 Metric (b) target: for each valid time, revision = next issuance − current issuance. Modelled the
 absolute magnitude of that and put a symmetric band around the currently issued forecast.
