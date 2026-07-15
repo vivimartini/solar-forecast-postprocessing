@@ -14,9 +14,9 @@ layer generalises better (**79.1%** P10–P90 coverage).
 **0–36h operational lead** for point correction. Metric (b) — bounds on the next forecast revision —
 as extension.
 
-Post-processing only removes *systematic* error. At 7–15 days the forecast still beats climatology
-(correlation ~0.89–0.91), but a learned correction **hurts** because there is no stable transferable
-structure left to learn:
+Post-processing only removes *systematic* error. At 7–15 days the forecast still beats **historical**
+climatology (correlation ~0.89–0.91 on 168–360h leads), but a learned correction **hurts** because
+there is no stable transferable structure left to learn:
 
 | lead | correction skill (walk-forward eval) |
 |------|--------------------------------------|
@@ -27,7 +27,8 @@ structure left to learn:
 
 - **Operational lead:** `step − issued_at` (when the forecast is usable), not model init time.
 - **Daytime:** solar elevation > 5° (geometry-based, not outcome-dependent).
-- **Climatology baseline:** month × hour mean of historical actuals.
+- **Climatology baseline:** expanding month × hour mean of actuals at valid times **strictly before
+  issue day** (same latency rule as online bias; see `add_climatology_baseline` in `src/data.py`).
 - **Actuals latency:** online bias uses only fully realised past valid days (`shift(1)` on valid time);
   a forecast issued on day D sees residuals through D−1.
 
