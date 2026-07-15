@@ -10,9 +10,10 @@ that's when you can actually act on it. Some rows come out negative (valid time 
 
 Baseline is the raw forecast, not climatology. It's already good, I'm just shaving the residual.
 
-Fleet grows ~41 → 56 GW over the period (99.9th-pct actual by year). So raw MW errors aren't comparable
-across time — same size error looks tiny early and huge late, just from scale. Reporting relative RMSE
-skill vs the contemporaneous forecast instead of raw MW.
+The empirical upper generation envelope grows from roughly 41 to 56 GW over the sample (99.9th-pct
+actual by year), consistent with an increasing effective generation scale. Raw MW errors aren't
+comparable across time — same size error looks tiny early and huge late, just from scale. Reporting
+relative RMSE skill vs the contemporaneous forecast instead of raw MW.
 
 Scope: brief wants 0–36h or 168–360h. Ran the correction on both — helps at short (+1.28%), hurts at long
 (−1.81%). So the long-range error is basically noise, nothing transferable to correct. Went 0–36h.
@@ -51,18 +52,20 @@ Tried to get more out of the point forecast, nothing worked:
 - Capacity-normalising the residual first (divide by a capacity proxy — running upper envelope of
   generation): no help.
 - Physics features (clear-sky, geometry): nothing robust. Makes sense — I'm post-processing an NWP
-  forecast that already has the physics in it; the leftover error is fleet growth + drift, not physical.
+  forecast that already has the physics in it; the leftover error is scale growth + drift, not physical.
 So point deliverable is just the online bias.
 
 Physical bounds: the additive correction can push the point forecast slightly below 0 at dawn/dusk
 (~0.02% of rows), and P10 more often. Clip everything to [0, capacity].
 
-Uncertainty (metric b, and the better half). Quantile GBDT for P10/P90 (went with the 80% central
-interval). Tried offline conformal first — under-covers on eval, same drift problem. Switched to online
-ACI (updates the width from observed coverage errors as it goes). Holds at 79.1% vs 80% target, width
-~4.45 GW. Sort the quantiles at the end so they don't cross. Coverage by regime 82 / 79 / 77, roughly
-even. Width is informative, which is the point for trading: bucket by width and MAE goes 643 → 1327 →
-1923. Tells you when to distrust the forecast.
+Uncertainty (metric b, and the better half). Quantile GBDT for P10/P90 (80% central interval).
+Tried static offline conformal calibration first — restored near-nominal coverage on walk-forward eval
+(81.2%), but wider intervals and worse interval score than adaptive online ACI. Compared static
+conformal with online ACI: static restored marginal coverage; online ACI hit 79.1% with substantially
+better interval score — better calibration–sharpness trade-off under drift. Dispersion scaling on top.
+Width ~4.45 GW. Sort quantiles so they don't cross. Coverage by regime 82 / 79 / 77, roughly even.
+Width is informative: bucket by width and MAE goes 643 → 1327 → 1923. Tells you when to distrust the
+forecast.
 
 Metric (b) target: for each valid time, revision = next issuance − current issuance. Modelled the
 absolute magnitude of that and put a symmetric band around the currently issued forecast.

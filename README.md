@@ -14,9 +14,10 @@ layer generalises better (**79.1%** P10–P90 coverage).
 **0–36h operational lead** for point correction. Metric (b) — bounds on the next forecast revision —
 as extension.
 
-Post-processing only removes *systematic* error. At 7–15 days the forecast still beats **historical**
-climatology (correlation ~0.89–0.91 on 168–360h leads), but a learned correction **hurts** because
-there is no stable transferable structure left to learn:
+Post-processing only removes *systematic* error. At 7–15 days the raw forecast still beats causal
+historical climatology and retains correlations of approximately **0.89–0.92** with actuals, although
+these correlations are partly inflated by shared diurnal and seasonal structure. A learned correction
+**hurts** at that range because there is no stable transferable structure left to learn:
 
 | lead | correction skill (walk-forward eval) |
 |------|--------------------------------------|
@@ -36,7 +37,9 @@ there is no stable transferable structure left to learn:
 
 - Forecasts GW, actuals MW → ×1000.
 - Actuals are 15-min snapshots; hourly mean to match forecast definition.
-- Fleet grows ~41 → 56 GW (99.9th-pct actual by year); report skill vs raw forecast, not raw MW drift.
+- The empirical upper generation envelope grows from roughly **41 to 56 GW** over the sample (99.9th-pct
+  actual by year), consistent with an increasing effective generation scale. Skill is reported against
+  the contemporaneous raw forecast alongside absolute MW errors.
 
 ## Evaluation
 
@@ -56,9 +59,14 @@ from zero**. The value is not overclaiming a point gain; it is that adaptivity *
 
 GBDT on the de-biased residual: **−2.53%** — still hurts OOS. Point deliverable = online bias only.
 
-**Predictive intervals:** quantile GBDT + online ACI + dispersion scaling → **79.1%** P10–P90
-coverage (target 80%; mean width **4,452 MW**). Interval width ranks realised error — 643 / 1,327 /
-1,923 MW MAE across narrow / medium / wide terciles (see `fig_uncertainty_informative.png`).
+**Predictive intervals:** quantile GBDT base layer. Tried static offline conformal calibration first —
+it restored near-nominal coverage on walk-forward evaluation (**81.2%**), but produced wider intervals
+and a worse interval score than the adaptive online procedure. Compared static conformal with online
+ACI: static conformal restored marginal coverage, while online ACI achieved comparable near-nominal
+coverage (**79.1%**, target 80%) with a substantially better interval score — a better
+calibration–sharpness trade-off under drift. Dispersion scaling on top; mean width **4,452 MW**
+(~4.45 GW). Interval width ranks realised error — 643 / 1,327 / 1,923 MW MAE across narrow / medium /
+wide terciles (see `fig_uncertainty_informative.png`).
 
 ## Results (walk-forward evaluation)
 
@@ -80,7 +88,7 @@ generation land?
 
 **B. Revision uncertainty** (P10–P90 width **0.94 GW**, base+dispersion): how much will the *next
 issuance* move the forecast? Direction only weakly predictable (AUC 0.554); dispersion predicts
-magnitude (Spearman ρ = 0.44).
+magnitude (Spearman ρ = 0.44; partial ρ ≈ 0.29 controlling for level).
 
 ## How to run
 
@@ -108,4 +116,9 @@ config.yaml   paths, lead band, validation, online_bias
 outputs/      figures + predictions.csv (gitignored)
 ```
 
+## What I'd do next
+
+- Genuinely untouched final holdout (~2 months) with frozen procedure.
+- Recency-weighted conformal to close the last ~1pt of coverage.
+- State-space / Kalman bias tracker instead of rolling mean.
 
