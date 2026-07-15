@@ -65,7 +65,7 @@ def main():
     print(f"point skill (RMSE): {skill:+.2f}%")
     print(f"block-bootstrap 95% CI: [{lo:+.2f}%, {hi:+.2f}%]  (issue-day resampling, n={N_BOOT})")
     print(f"days with positive skill: {pct_days:.0f}%")
-    print(f"revision direction AUC: {auc:.3f}  (0.50 = unpredictable)")
+    print(f"revision direction AUC: {auc:.3f}  (0.50 = random; >0.55 = weak signal)")
 
 
 if __name__ == "__main__":

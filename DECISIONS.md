@@ -40,7 +40,7 @@
 - Prior runs for a valid hour = a time-lagged ensemble; their spread (std of latest k=4 PRIOR members,
   shift(1) so leak-safe) = uncertainty signal. disp_mw covers 80,722/80,745 daytime rows.
 - Tested airtight: Spearman(spread, |error|) 0.376 (0.402 daytime, k=4); 0.178 controlling for level; robust across seasons.
-- Honest null: revision *direction* ≈ 0. Spread variants: simple de-bias didn't beat raw (TODO: variance-normalised).
+- Honest null: revision *direction* weakly predictable (AUC 0.554). Spread variants: simple de-bias didn't beat raw (TODO: variance-normalised).
 - RESOLVED (scripts/04_ablation.py): dispersion does NOT help OUT-OF-SAMPLE POINT skill.
   base +0.83% vs base+disp +0.45% mean; negative on 4/5 fold-deltas. Expected: it tracks error
   MAGNITUDE (|residual|), not DIRECTION, so it can't sharpen the mean — pure noise to the point model.
@@ -64,14 +64,14 @@
 ## Capacity normalisation (scripts/08_capacity.py)
 - Fleet proxy = trailing 60d peak of the forecast (shift(1), leak-safe). residual_norm = residual/cap.
 - CV: MW target +0.88% → normalised +1.09%. Helps the fleet-growth folds (1,2,4); fold 3 (season) still negative.
-- Sealed test: normalised −14.79% vs raw-MW −9.79% — normalisation amplifies but doesn't cause the failure.
+- Walk-forward eval: normalised −14.79% vs raw-MW −9.79% — normalisation amplifies but doesn't cause the failure.
 
 ## Rich features (scripts/11_features.py)
 - Shape: fc_ramp, fc_curv, fc_over_cs + clearsky_ghi. CV: base +1.09% → rich +1.30%.
 - add_forecast_shape audited: 0 mismatches vs time-based truth on 1.74M rows (positional shift is fine here).
-- Sealed test: rich vs base only 0.4pp apart on the static GBDT — not the −15% culprit.
+- Walk-forward eval: rich vs base only 0.4pp apart on the static GBDT — not the −15.2% culprit.
 
-## Metric (b) — revision / confidence (scripts/metric_b.py)
+## Metric (b) — revision / predictive intervals (scripts/metric_b.py)
 - next_revision = next issuance's fc − current fc, same valid hour. Direction weakly predictable (AUC ≈ 0.55 via scripts/16_significance.py), not a pure coin flip.
 - Spearman(disp, |next revision|) = 0.443. Dispersion helps |revision| MAE: 222.7 → 219.9 MW.
 - **Revision quantiles (P10/P50/P90 of next_revision):** base pinball 107.9, coverage 77.4%, width 919 MW;
@@ -80,12 +80,12 @@
 
 ## Walk-forward evaluation — final deliverable (scripts/10_final_test.py)
 - Window: 2025-09-24 → 2026-05-31, 14,284 daytime rows. Chronological walk-forward backtest — informed final design; not an untouched holdout.
-- Static GBDT (rich, normalised): −15.18% skill. Diagnosis: bias flips +157 MW (dev) → −320 MW (eval). See outputs/fig_bias_drift.png.
+- Static GBDT (rich, normalised): −15.18% skill. Diagnosis: bias flips +152 MW (dev) → −320 MW (eval). See outputs/fig_bias_drift.png.
 - Online per-hour bias (60d window): **+1.28%** skill. Block-bootstrap 95% CI **[−0.72%, +3.23%]** — not statistically significant (scripts/16_significance.py). Positive 54% of issue-days.
 - GBDT on de-biased residual: **−2.53%** (still hurts OOS).
 - Intervals (online ACI + dispersion): **79.1%** coverage.
-- DECISION: ship online bias only for point forecast. Robust claim = avoiding static −15%, not a significant point gain over raw.
-- Conditional coverage calm/mid/volatile: 0.82 / 0.79 / 0.77. |error| by instability: 801 → 1412 → 1725 MW.
+- DECISION: ship online bias only for point forecast. Robust claim = avoiding static −15.2%, not a significant point gain over raw.
+- Conditional coverage calm/mid/volatile: 82.1% / 78.5% / 76.8%. |error| by instability: 801 → 1412 → 1725 MW.
 
 ## GBDT on de-biased residual (scripts/15_debias_gbdt.py)
 - Target = residual_mw − online_bias. CV: mixed (+0.3–1.8pp on some folds over bias alone).

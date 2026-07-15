@@ -11,7 +11,7 @@ def main():
     v = cfg["validation"]
     folds, test_idx = rolling_origin_splits(day, v["n_folds"], v["embargo_days"], v["sealed_test_frac"])
 
-    print("sealed test rows:", len(test_idx),
+    print("walk-forward eval rows:", len(test_idx),
           "| window:", day.loc[test_idx, "issued_at"].min().date(),
           "->", day.loc[test_idx, "issued_at"].max().date())
     print("\nrolling folds (train on past → validate on next block):")

@@ -4,6 +4,7 @@ import pandas as pd
 
 
 def train_test_seal(df, sealed_test_frac, time_col="issued_at"):
+    """(dev_mask, eval_mask): final chronological slice for walk-forward evaluation."""
     t = df[time_col]
     cutoff = t.min() + (t.max() - t.min()) * (1 - sealed_test_frac)
     return (t < cutoff).values, (t >= cutoff).values

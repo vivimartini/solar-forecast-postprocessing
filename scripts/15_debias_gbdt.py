@@ -23,7 +23,7 @@ def evaluate_fold(day, tr, va, X, y_debias, bias):
     }
 
 
-def evaluate_sealed(day, X, y_debias, bias):
+def evaluate_walkforward(day, X, y_debias, bias):
     v = load_config()["validation"]
     dev_mask, test_mask = train_test_seal(day, v["sealed_test_frac"])
     tr = np.where(dev_mask)[0]
@@ -64,8 +64,8 @@ def main():
         r = evaluate_fold(day, tr, va, X, y, bias)
         print(f"{'fold ' + str(i + 1):12s}  {r['bias_skill']:+11.2f}%  {r['combined_skill']:+11.2f}%")
 
-    r = evaluate_sealed(day, X, y, bias)
-    print(f"{'sealed test':12s}  {r['bias_skill']:+11.2f}%  {r['combined_skill']:+11.2f}%")
+    r = evaluate_walkforward(day, X, y, bias)
+    print(f"{'walk-forward':12s}  {r['bias_skill']:+11.2f}%  {r['combined_skill']:+11.2f}%")
 
 
 if __name__ == "__main__":

@@ -32,7 +32,7 @@ def main():
     corrected = np.clip(fc(test) + day.loc[test, "online_bias"].values, 0, None)
     base_rmse, mod_rmse = rmse(actual, fc(test)), rmse(actual, corrected)
 
-    # --- point: bias + GBDT on de-biased residual (not shipped, sealed negative) ---
+    # --- point: bias + GBDT on de-biased residual (not shipped, negative on walk-forward eval) ---
     y_deb = day["residual_debias"]
     gbdt = train_residual_model(X.iloc[fit], y_deb.iloc[fit], X.iloc[es], y_deb.iloc[es])
     corrected2 = np.clip(fc(test) + day.loc[test, "online_bias"].values + gbdt.predict(X.iloc[test]), 0, None)
@@ -65,7 +65,7 @@ def main():
     pred.rename(columns={"disp_mw": "disp"}, inplace=True)
     pred.to_csv("outputs/predictions.csv", index=False)
 
-    print("=== SEALED TEST (touched once) ===")
+    print("=== WALK-FORWARD EVALUATION (chronological backtest) ===")
     print(f"rows {len(test)} | {day.loc[test,'issued_at'].min().date()} -> {day.loc[test,'issued_at'].max().date()}")
     print(f"POINT:     baseline RMSE {base_rmse:7.1f} -> model {mod_rmse:7.1f} | skill {skill_score(mod_rmse, base_rmse)*100:+.2f}%")
     print(f"POINT+GBDT: baseline RMSE {base_rmse:7.1f} -> model {mod2_rmse:7.1f} | skill {skill_score(mod2_rmse, base_rmse)*100:+.2f}%"

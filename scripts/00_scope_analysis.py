@@ -18,7 +18,7 @@ def main():
         fr, cr = rmse(s.actual_mw-s.fc_mw), rmse(s.actual_mw-clim[s.index])
         print(f"  {lo:3d}-{hi:3d}h: RMSE {fr:5.0f} MW | skill vs clim {(1-fr/cr)*100:+.0f}% | corr {np.corrcoef(s.fc_mw,s.actual_mw)[0,1]:.2f}")
 
-    print("\n=== adaptive-correction skill (sealed test), by lead ===")
+    print("\n=== adaptive-correction skill (walk-forward eval), by lead ===")
     for lo, hi, name in [(0,36,"0-36h"),(168,360,"168-360h")]:
         d = df[(df.op_lead_h>lo)&(df.op_lead_h<=hi)].sort_values(["issued_at","step"]).reset_index(drop=True)
         d["resid"]=d.actual_mw-d.fc_mw; d["iday"]=d.issued_at.dt.floor("D"); d["hour"]=d.step.dt.hour
