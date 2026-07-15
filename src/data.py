@@ -57,6 +57,41 @@ def add_next_revision(forecasts):
     return f
 
 
+def add_climatology_baseline(df, out_col="clim_mw", min_obs=7):
+    """Month×hour mean of actuals at valid times strictly before issue day."""
+    d = df.copy()
+    d["_idx"] = np.arange(len(d))
+    d["_m"] = d["step"].dt.month
+    d["_h"] = d["step"].dt.hour
+    d["_iday"] = d["issued_at"].dt.floor("D")
+    d["_vday"] = d["step"].dt.floor("D")
+
+    daily = (
+        d.groupby(["_vday", "_m", "_h"], observed=True)["actual_mw"]
+         .mean()
+         .reset_index()
+         .sort_values(["_m", "_h", "_vday"])
+    )
+    daily[out_col] = (
+        daily.groupby(["_m", "_h"], observed=True)["actual_mw"]
+             .transform(lambda s: s.expanding(min_periods=min_obs).mean())
+    )
+
+    lookup = daily.rename(columns={"_vday": "_ref_day"})
+    merged = pd.merge_asof(
+        d.sort_values("_iday"),
+        lookup.sort_values("_ref_day"),
+        left_on="_iday",
+        right_on="_ref_day",
+        by=["_m", "_h"],
+        direction="backward",
+        allow_exact_matches=False,
+    )
+    out = df.copy()
+    out[out_col] = merged.sort_values("_idx")[out_col].values
+    return out
+
+
 def build_dataset(cfg, lead_band=None):
     fc, ac = load_raw(cfg)
     fc = prepare_forecasts(fc)

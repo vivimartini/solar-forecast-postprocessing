@@ -1,6 +1,6 @@
 """Scope check: forecast skill by lead, adaptive correction on 0-36h vs 168-360h."""
 import numpy as np, pandas as pd, pvlib
-from src.data import load_config, load_raw, prepare_forecasts, hourly_actuals
+from src.data import load_config, load_raw, prepare_forecasts, hourly_actuals, add_climatology_baseline
 
 def main():
     cfg = load_config(); f, ac = load_raw(cfg); f = prepare_forecasts(f); ah = hourly_actuals(ac)
@@ -9,13 +9,15 @@ def main():
     df = f.merge(ah, left_on="step", right_index=True, how="inner").dropna(subset=["actual_mw"])
     df["elev"] = loc.get_solarposition(pd.DatetimeIndex(df["step"]))["elevation"].values
     df = df[df.elev > cfg["daytime_elevation_deg"]].copy()
-    clim = df.groupby([df.step.dt.month, df.step.dt.hour])["actual_mw"].transform("mean")
+    df = add_climatology_baseline(df)
 
-    print("=== forecast skill vs climatology, by lead ===")
+    print("=== forecast skill vs historical climatology, by lead ===")
+    print("(clim = month×hour mean of actuals at valid times strictly before issue day)\n")
     for lo, hi in [(0,36),(48,72),(96,120),(168,240),(240,360)]:
-        s = df[(df.op_lead_h>lo)&(df.op_lead_h<=hi)]
+        s = df[(df.op_lead_h>lo)&(df.op_lead_h<=hi)].dropna(subset=["clim_mw"])
         if len(s) < 200: continue
-        fr, cr = rmse(s.actual_mw-s.fc_mw), rmse(s.actual_mw-clim[s.index])
+        fr = rmse(s.actual_mw - s.fc_mw)
+        cr = rmse(s.actual_mw - s.clim_mw)
         print(f"  {lo:3d}-{hi:3d}h: RMSE {fr:5.0f} MW | skill vs clim {(1-fr/cr)*100:+.0f}% | corr {np.corrcoef(s.fc_mw,s.actual_mw)[0,1]:.2f}")
 
     print("\n=== adaptive-correction skill (walk-forward eval), by lead ===")
