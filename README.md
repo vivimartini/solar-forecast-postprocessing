@@ -108,8 +108,4 @@ config.yaml   paths, lead band, validation, online_bias
 outputs/      figures + predictions.csv (gitignored)
 ```
 
-## What I'd do next
 
-- Genuinely untouched final holdout (~2 months) with frozen procedure.
-- Recency-weighted conformal to close the last ~1pt of coverage.
-- State-space / Kalman bias tracker instead of rolling mean.
