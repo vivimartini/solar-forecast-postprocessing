@@ -7,6 +7,7 @@
 ## Data
 - Forecast is GW, actuals MW → ×1000 to reconcile (peaks line up ~53–56 GW). Verified, not assumed.
 - Lead = step − issued_at (operational), NOT step − init_time. Found some negative-lead rows → dropped.
+- Climatology baseline (`add_climatology_baseline`): month×hour mean of actuals at valid times strictly before issue day — not full-sample (scripts/00_scope_analysis.py).
 
 ## Baseline (to beat)
 - Daytime RMSE by lead band: 0–6h ~1478 · 6–12h ~1562 · 12–24h ~1705 · 24–36h ~1841 MW.
