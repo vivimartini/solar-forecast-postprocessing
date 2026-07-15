@@ -1,7 +1,5 @@
 # DECISIONS — working log
 
-Rough notes as I went. Tried X, got Y.
-
 Data first. Forecasts peak ~55, actuals ~55,000, so forecasts are GW and actuals MW. ×1000. Peaks line
 up after that.
 
