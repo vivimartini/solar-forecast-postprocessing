@@ -7,6 +7,7 @@ python scripts/00_scope_analysis.py
 python scripts/01_eda.py
 python scripts/02_baseline.py
 python scripts/10_final_test.py
+python scripts/16_significance.py
 python scripts/make_figures.py
 
 echo ""

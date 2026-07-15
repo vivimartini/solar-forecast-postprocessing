@@ -61,6 +61,7 @@ def main():
     pred["p10"] = p10
     pred["p90"] = p90
     pred["actual_mw"] = actual
+    pred["inside"] = inside
     pred.rename(columns={"disp_mw": "disp"}, inplace=True)
     pred.to_csv("outputs/predictions.csv", index=False)
 

@@ -72,28 +72,32 @@
 - Sealed test: rich vs base only 0.4pp apart on the static GBDT — not the −15% culprit.
 
 ## Metric (b) — revision / confidence (scripts/metric_b.py)
-- next_revision = next issuance's fc − current fc, same valid hour. Direction ≈ coin flip (50.6% up).
+- next_revision = next issuance's fc − current fc, same valid hour. Direction weakly predictable (AUC ≈ 0.55 via scripts/16_significance.py), not a pure coin flip.
 - Spearman(disp, |next revision|) = 0.443. Dispersion helps |revision| MAE: 222.7 → 219.9 MW.
 - **Revision quantiles (P10/P50/P90 of next_revision):** base pinball 107.9, coverage 77.4%, width 919 MW;
   base+disp 107.3, coverage 78.0%, width 940 MW. Dispersion helps here (unlike actuals intervals).
-- Answer to brief: symmetric bounds on the next update, sized by instability; direction unpredictable.
+- Answer to brief: symmetric predictive intervals on the next update, sized by instability; direction only weakly predictable.
+
+## Walk-forward evaluation — final deliverable (scripts/10_final_test.py)
+- Window: 2025-09-24 → 2026-05-31, 14,284 daytime rows. Chronological walk-forward backtest — informed final design; not an untouched holdout.
+- Static GBDT (rich, normalised): −15.18% skill. Diagnosis: bias flips +157 MW (dev) → −320 MW (eval). See outputs/fig_bias_drift.png.
+- Online per-hour bias (60d window): **+1.28%** skill. Block-bootstrap 95% CI **[−0.72%, +3.23%]** — not statistically significant (scripts/16_significance.py). Positive 54% of issue-days.
+- GBDT on de-biased residual: **−2.53%** (still hurts OOS).
+- Intervals (online ACI + dispersion): **79.1%** coverage.
+- DECISION: ship online bias only for point forecast. Robust claim = avoiding static −15%, not a significant point gain over raw.
+- Conditional coverage calm/mid/volatile: 0.82 / 0.79 / 0.77. |error| by instability: 801 → 1412 → 1725 MW.
 
 ## GBDT on de-biased residual (scripts/15_debias_gbdt.py)
 - Target = residual_mw − online_bias. CV: mixed (+0.3–1.8pp on some folds over bias alone).
-- **Sealed test: bias +1.28% → bias+GBDT −2.53%.** Conditional structure still doesn't transfer OOS.
+- Walk-forward eval: bias +1.28% → bias+GBDT −2.53%. Conditional structure still doesn't transfer OOS.
 - DECISION: point deliverable = online bias only; GBDT layer kept as documented negative result.
+
+## Significance (scripts/16_significance.py)
+- Block-bootstrap (issue-day resampling, n=2000): skill +1.28%, 95% CI [−0.72%, +3.23%], positive 54% of days. CI includes zero.
+- Revision direction classifier AUC 0.554 (weakly predictable, not unpredictable).
 
 ## Conformal arc (scripts/06, 09, 13, 13b, 14)
 - Raw quantile intervals: 71.9% coverage (undercover). Fleet-normalised target alone → 77.1% without conformal.
 - Offline CQR: 74.1% — cal slice in the past, drift breaks exchangeability. 13b: Q < 0 on folds 1-2 (narrows when should widen).
 - Dispersion-scaled offline conformal (13): made conditional coverage WORSE (volatile 0.725 → 0.651).
 - Online ACI (14): 83.2% marginal; dispersion-scaled 82.9% with better conditional balance (volatile 0.776 → 0.796).
-
-## Sealed test — final deliverable (scripts/10_final_test.py)
-- Window: 2025-09-24 → 2026-05-31, 14,284 daytime rows, touched once.
-- Static GBDT (rich, normalised): −15.18% skill. Diagnosis: bias flips +157 MW (dev) → −320 MW (test), progressive 2026 drift.
-- Online per-hour bias (60d window): **+1.28%** skill. GBDT on de-biased residual: **−2.53%** (still hurts OOS).
-- Intervals (online ACI + dispersion): **79.1%** coverage.
-- DECISION: ship online bias only for the point forecast; GBDT layer documented as negative result.
-- Conditional coverage calm/mid/volatile: 0.82 / 0.79 / 0.77. |error| by instability: 801 → 1412 → 1725 MW.
-- Headline: adaptivity beats static under non-stationarity. Point correction is modest; uncertainty layer generalises.
